@@ -1,0 +1,16 @@
+services:
+  nginx:
+    image: nginx:stable
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  app:
+    build: ./app
+    volumes:
+      - ./app:/app
+    restart: unless-stopped
