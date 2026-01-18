@@ -40,6 +40,20 @@ def get_shipments(
         res = [s for s in res if s.status == status]
     return res
 
+@router.get(
+    "/now",
+    summary="Витрина перевозок на сейчас",
+    description="Возвращает агрегированное текущее состояние: сколько перевозок в каждом статусе.",
+)
+def shipments_now():
+    counts = {s.value: 0 for s in ShipmentStatus}
+    for sh in FAKE_SHIPMENTS:
+        counts[sh.status.value] += 1
+
+    return {
+        "total": len(FAKE_SHIPMENTS),
+        "by_status": counts,
+    }
 
 @router.get(
     "/{shipment_id}",
@@ -52,3 +66,4 @@ def get_shipment(shipment_id: str):
         if s.id == shipment_id:
             return s
     raise HTTPException(status_code=404, detail="Shipment not found")
+

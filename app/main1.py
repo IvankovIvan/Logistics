@@ -6,11 +6,6 @@ from fastapi import FastAPI, HTTPException
 # title — это имя API (видно в документации)
 app = FastAPI(title="Logistics API")
 
-def test():
-    x = 1
-    y = "2"
-    return x + y
-
 
 # -----------------------------
 # СЛУЖЕБНЫЙ ЭНДПОИНТ

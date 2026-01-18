@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
-from routers import shipments_router, warehouses_router
+from routers import shipments_router, warehouses_router, map_router
+
 
 app = FastAPI(
     title="Logistics API",
@@ -19,3 +20,4 @@ def health():
 
 app.include_router(warehouses_router)
 app.include_router(shipments_router)
+app.include_router(map_router)

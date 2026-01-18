@@ -1,73 +1,204 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import maplibregl, { Map, LngLatBoundsLike } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 /**
- * Тип ответа витрины "на сейчас".
- * Важно: структура должна совпадать с API /api/shipments/now.
+ * Контракт /api/map (единый для карты).
+ * Важно: lat/lon обязательны (бэк уже отфильтровал None).
  */
-type ShipmentsNow = {
-  total: number;
-  by_status: {
-    planned: number;
-    in_transit: number;
-    delivered: number;
-    cancelled: number;
-  };
+type MapWarehouse = {
+  id: string;
+  name: string;
+  status: string;
+  lon: number;
+  lat: number;
 };
 
-export default function Page() {
-  // data = текущая витрина (null пока не загрузили)
-  const [data, setData] = useState<ShipmentsNow | null>(null);
+type MapRoute = {
+  id: string;
+  status: "planned" | "in_transit" | "delivered" | "cancelled";
+  from: string;
+  to: string;
+  coordinates: [number, number][]; // [[lon,lat],[lon,lat],...]
+};
 
-  // loading = чтобы заблокировать кнопку во время запроса
-  const [loading, setLoading] = useState(false);
+type MapResponse = {
+  warehouses: MapWarehouse[];
+  routes: MapRoute[];
+};
 
-  /**
-   * Загружаем витрину с backend.
-   * Здесь используем относительный URL "/api/..." — это идёт в nginx,
-   * а nginx уже проксирует на FastAPI.
-   */
-  async function load() {
-    setLoading(true);
-
-    // Если API вернёт ошибку, упадём аккуратно (потом сделаем красивее)
-    const res = await fetch("/api/shipments/now", { cache: "no-store" });
-    const json = await res.json();
-
-    setData(json);
-    setLoading(false);
+/**
+ * Универсальный fetch JSON с понятной ошибкой.
+ * Если API не отдаёт 200 — увидишь причину, а не "пусто".
+ */
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`${url} -> ${res.status} ${res.statusText}\n${text}`);
   }
+  return (await res.json()) as T;
+}
 
-  // При первом открытии страницы сразу грузим данные
+export default function Page() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<Map | null>(null);
+
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    load();
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: "https://demotiles.maplibre.org/style.json",
+      center: [37.6, 55.75],
+      zoom: 4,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    mapRef.current = map;
+
+    map.on("load", async () => {
+      try {
+        setError(null);
+
+        // 1) ОДИН запрос: всё для карты
+        const data = await fetchJson<MapResponse>("/api/map");
+
+        // 2) bounds — чтобы автозумить на склады
+        const bounds = new maplibregl.LngLatBounds();
+        for (const w of data.warehouses) bounds.extend([w.lon, w.lat]);
+
+        // 3) GeoJSON складов
+        const warehousesGeoJson: GeoJSON.FeatureCollection<
+          GeoJSON.Point,
+          { id: string; name: string; status: string }
+        > = {
+          type: "FeatureCollection",
+          features: data.warehouses.map((w) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [w.lon, w.lat] },
+            properties: { id: w.id, name: w.name, status: w.status },
+          })),
+        };
+
+        // 4) GeoJSON маршрутов
+        const routesGeoJson: GeoJSON.FeatureCollection<
+          GeoJSON.LineString,
+          { id: string; status: MapRoute["status"]; from: string; to: string }
+        > = {
+          type: "FeatureCollection",
+          features: data.routes.map((r) => ({
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: r.coordinates },
+            properties: { id: r.id, status: r.status, from: r.from, to: r.to },
+          })),
+        };
+
+        // 5) Sources
+        map.addSource("warehouses", { type: "geojson", data: warehousesGeoJson });
+        map.addSource("routes", { type: "geojson", data: routesGeoJson });
+
+        // 6) Слой складов
+        map.addLayer({
+          id: "warehouses-layer",
+          type: "circle",
+          source: "warehouses",
+          paint: {
+            "circle-radius": 6,
+            "circle-color": [
+              "match",
+              ["get", "status"],
+              "active",
+              "#2563eb",
+              "maintenance",
+              "#f59e0b",
+              "closed",
+              "#6b7280",
+              "#2563eb",
+            ],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+
+        // 7) Слой маршрутов (линии)
+        map.addLayer({
+          id: "routes-line",
+          type: "line",
+          source: "routes",
+          paint: {
+            "line-width": 3,
+            "line-opacity": 0.9,
+            "line-color": [
+              "match",
+              ["get", "status"],
+              "in_transit",
+              "#16a34a",
+              "planned",
+              "#f59e0b",
+              "#6b7280",
+            ],
+          },
+        });
+
+        // 8) Попап по клику на маршрут
+        map.on("click", "routes-line", (e) => {
+          const f = e.features?.[0];
+          if (!f || !f.properties) return;
+          const p = f.properties as any;
+
+          new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setText(`Shipment ${p.id} (${p.status}) ${p.from} -> ${p.to}`)
+            .addTo(map);
+        });
+
+        map.on("mouseenter", "routes-line", () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", "routes-line", () => (map.getCanvas().style.cursor = ""));
+
+        // 9) Автозум на склады
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds as LngLatBoundsLike, { padding: 80 });
+        }
+      } catch (e) {
+        console.error(e);
+        setError(String(e));
+      }
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
-  // Пока данных нет — показываем простую заглушку
-  if (!data) {
-    return <main style={{ padding: 32 }}>Загрузка…</main>;
-  }
-
   return (
-    <main style={{ padding: 32, fontFamily: "sans-serif" }}>
-      <h1>Логистика — витрина “на сейчас”</h1>
+    <div style={{ width: "100vw", height: "100vh" }}>
+      {error ? (
+        <div
+          style={{
+            position: "absolute",
+            zIndex: 10,
+            top: 12,
+            left: 12,
+            right: 12,
+            padding: 12,
+            background: "white",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
 
-      {/* Ручное обновление: безопасный MVP без автопуллинга */}
-      <button onClick={load} disabled={loading}>
-        {loading ? "Обновляю…" : "Обновить"}
-      </button>
-
-      <p>
-        <strong>Всего перевозок:</strong> {data.total}
-      </p>
-
-      <ul>
-        <li>Планируется: {data.by_status.planned}</li>
-        <li>В пути: {data.by_status.in_transit}</li>
-        <li>Доставлено: {data.by_status.delivered}</li>
-        <li>Отменено: {data.by_status.cancelled}</li>
-      </ul>
-    </main>
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    </div>
   );
 }
