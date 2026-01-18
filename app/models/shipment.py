@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Dict
 
 from pydantic import BaseModel, Field
 
@@ -34,5 +35,7 @@ class Shipment(BaseModel):
         examples=["2026-01-17T14:32:00Z"],
     )
 
-    class Config:
-        populate_by_name = True
+    # Pydantic v2: замена class Config
+    model_config = {
+        "populate_by_name": True
+    }
