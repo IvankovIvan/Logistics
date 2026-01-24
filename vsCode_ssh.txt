@@ -1,0 +1,65 @@
+Это обёртка code-server через proxychains — ровно то, что мы уже сделали вручную, но теперь формализуем.
+
+⸻
+
+Патч (что именно делаем)
+
+Для конкретного commit-id VS Code Server:
+
+cd ~/.vscode-server/bin/<COMMIT_ID>/bin
+
+mv code-server code-server.real
+
+cat > code-server <<'SH'
+#!/usr/bin/env bash
+exec proxychains4 -q "$(dirname "$0")/code-server.real" "$@"
+SH
+
+chmod +x code-server
+
+Что это делает:
+любой запуск code-server идёт через proxychains → SOCKS5, а остальная система — нет.
+
+Автопатч (чтобы не делать руками после обновления)
+
+Скрипт сам находит новый commit-id и применяет патч.
+
+cat > ~/patch-vscode-proxy.sh <<'SH'
+#!/usr/bin/env bash
+set -e
+
+BIN="$HOME/.vscode-server/bin"
+for d in "$BIN"/*; do
+  [ -d "$d/bin" ] || continue
+  cd "$d/bin"
+  if [ -x code-server ] && [ ! -f code-server.real ]; then
+    echo "Patching $(basename "$d")"
+    mv code-server code-server.real
+    cat > code-server <<'EOF'
+#!/usr/bin/env bash
+exec proxychains4 -q "$(dirname "$0")/code-server.real" "$@"
+EOF
+    chmod +x code-server
+  fi
+done
+SH
+
+chmod +x ~/patch-vscode-proxy.sh
+
+Запускать после любого обновления (или просто иногда):
+
+~/patch-vscode-proxy.sh
+
+Проверка, что патч активен
+
+head -n 2 ~/.vscode-server/bin/*/bin/code-server
+
+Должно быть:
+
+#!/usr/bin/env bash
+exec proxychains4 -q ...
+
+Коротко
+	•	Патч = заменить code-server на обёртку с proxychains
+	•	Зачем = vsassets всегда шёл через Финляндию
+	•	Без побочек = прокси включён только для VS Code Server

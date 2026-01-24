@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 app = FastAPI(title="Logistics API")
 
 
+
+
 # -----------------------------
 # СЛУЖЕБНЫЙ ЭНДПОИНТ
 # -----------------------------

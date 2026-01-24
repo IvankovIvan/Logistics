@@ -18,7 +18,6 @@ router = APIRouter(prefix="/map", tags=["map"])
 
 TEnum = TypeVar("TEnum")
 
-
 def _get(obj: Any, key: str) -> Any:
     """
     Универсально достаёт поле и из dict, и из pydantic-модели.
