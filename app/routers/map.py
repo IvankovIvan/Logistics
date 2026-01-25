@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple, Type, TypeVar, cast
+from collections.abc import Mapping
+from enum import Enum
+from types import SimpleNamespace
+from typing import Protocol, Type, TypeVar
 
 from fastapi import APIRouter
 
@@ -16,37 +19,46 @@ from routers.warehouses import FAKE_WAREHOUSES
 
 router = APIRouter(prefix="/api/map", tags=["map"])
 
-TEnum = TypeVar("TEnum")
 
-def _get(obj: Any, key: str) -> Any:
-    """
-    Универсально достаёт поле и из dict, и из pydantic-модели.
-
-    Зачем:
-    - Сейчас у нас FAKE_WAREHOUSES = list[dict]
-    - А FAKE_SHIPMENTS = list[Shipment] (pydantic BaseModel)
-    - Чтобы /map работал и при будущей замене источника данных.
-    """
-    if isinstance(obj, dict):
-        return obj.get(key)
-    return getattr(obj, key, None)
+class WarehouseLike(Protocol):
+    id: str
+    name: str
+    lon: float | int | str
+    lat: float | int | str
+    status: WarehouseStatus | str | None
 
 
-def _as_enum(value: Any, enum_cls: Type[TEnum], default: TEnum) -> TEnum:
-    """
-    Приводит value к enum, но безопасно.
+class ShipmentLike(Protocol):
+    id: str
+    from_node: str
+    to_node: str
+    status: ShipmentStatus | str | None
 
-    Важно:
-    - value может быть уже enum'ом (ShipmentStatus.in_transit)
-    - может быть строкой ('in_transit')
-    - может быть None/мусором
-    """
+
+TEnum = TypeVar("TEnum", bound=Enum)
+
+
+def _as_warehouse(item: WarehouseLike | Mapping[str, object]) -> WarehouseLike:
+    if isinstance(item, Mapping):
+        # Normalize dicts so all access is attribute-based.
+        return SimpleNamespace(**item)  # type: ignore[return-value]
+    return item
+
+
+def _as_shipment(item: ShipmentLike | Mapping[str, object]) -> ShipmentLike:
+    if isinstance(item, Mapping):
+        # Normalize dicts so all access is attribute-based.
+        return SimpleNamespace(**item)  # type: ignore[return-value]
+    return item
+
+
+def _coerce_enum(value: object, enum_cls: Type[TEnum], default: TEnum) -> TEnum:
     if isinstance(value, enum_cls):
         return value
     if value is None:
         return default
     try:
-        return enum_cls(str(value))  # type: ignore[misc]
+        return enum_cls(str(value))
     except Exception:
         return default
 
@@ -67,25 +79,25 @@ def _as_enum(value: Any, enum_cls: Type[TEnum], default: TEnum) -> TEnum:
 )
 def get_map() -> MapResponse:
     # 1) Склады: собираем geo-словарь id -> (lon, lat)
-    warehouses: List[MapWarehouse] = []
-    geo: Dict[str, Tuple[float, float]] = {}
+    warehouses: list[MapWarehouse] = []
+    geo: dict[str, tuple[float, float]] = {}
 
-    for w in cast(List[Any], FAKE_WAREHOUSES):
-        wid = cast(str, _get(w, "id"))
-        name = cast(str, _get(w, "name"))
-
-        lon_raw = _get(w, "lon")
-        lat_raw = _get(w, "lat")
-        if lon_raw is None or lat_raw is None:
+    for raw in FAKE_WAREHOUSES:
+        w = _as_warehouse(raw)
+        if getattr(w, "lon", None) is None or getattr(w, "lat", None) is None:
             # Без координат точку на карту не ставим (иначе падает типизация/рендер).
             continue
 
-        lon = float(lon_raw)
-        lat = float(lat_raw)
+        lon = float(w.lon)
+        lat = float(w.lat)
+        w_status = _coerce_enum(
+            getattr(w, "status", None),
+            WarehouseStatus,
+            WarehouseStatus.active,
+        )
 
-        w_status_raw = _get(w, "status")
-        w_status = _as_enum(w_status_raw, WarehouseStatus, WarehouseStatus.active)
-
+        wid = str(w.id)
+        name = str(w.name)
         warehouses.append(
             MapWarehouse(
                 id=wid,
@@ -98,12 +110,12 @@ def get_map() -> MapResponse:
         geo[wid] = (lon, lat)
 
     # 2) Маршруты: FAKE_SHIPMENTS у тебя = list[Shipment], поэтому читаем атрибуты
-    routes: List[MapRoute] = []
+    routes: list[MapRoute] = []
 
-    for s in cast(List[Any], FAKE_SHIPMENTS):
-        sid = cast(str, _get(s, "id"))
-        from_id = cast(str, _get(s, "from_node"))
-        to_id = cast(str, _get(s, "to_node"))
+    for raw in FAKE_SHIPMENTS:
+        s = _as_shipment(raw)
+        from_id = str(s.from_node)
+        to_id = str(s.to_node)
 
         from_geo = geo.get(from_id)
         to_geo = geo.get(to_id)
@@ -111,15 +123,18 @@ def get_map() -> MapResponse:
             # Если складов нет в geo (нет координат/нет такого id) — линию не рисуем.
             continue
 
-        status_raw = _get(s, "status")
-        status = _as_enum(status_raw, ShipmentStatus, ShipmentStatus.planned)
+        status = _coerce_enum(
+            getattr(s, "status", None),
+            ShipmentStatus,
+            ShipmentStatus.planned,
+        )
 
         from_lon, from_lat = from_geo
         to_lon, to_lat = to_geo
 
         routes.append(
             MapRoute(
-                id=sid,
+                id=str(s.id),
                 status=status,
                 **{"from": from_id, "to": to_id},  # from/to — ключевые слова в python
                 coordinates=[
