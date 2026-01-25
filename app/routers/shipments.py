@@ -20,6 +20,45 @@ FAKE_SHIPMENTS: List[Shipment] = [
         status=ShipmentStatus.planned,
         updated_at=datetime(2026, 1, 17, 9, 5, tzinfo=timezone.utc),
     ),
+
+    # --- новые отправки для "живой" карты ---
+
+    Shipment(
+        id="shp-1003",
+        **{"from": "hel-01", "to": "spb-01"},
+        status=ShipmentStatus.in_transit,
+        updated_at=datetime(2026, 1, 18, 10, 15, tzinfo=timezone.utc),
+    ),
+    Shipment(
+        id="shp-1004",
+        **{"from": "msk-01", "to": "kzn-01"},
+        status=ShipmentStatus.planned,
+        updated_at=datetime(2026, 1, 18, 11, 40, tzinfo=timezone.utc),
+    ),
+    Shipment(
+        id="shp-1005",
+        **{"from": "kzn-01", "to": "ekb-01"},
+        status=ShipmentStatus.in_transit,
+        updated_at=datetime(2026, 1, 18, 12, 5, tzinfo=timezone.utc),
+    ),
+    Shipment(
+        id="shp-1006",
+        **{"from": "ekb-01", "to": "nsk-01"},
+        status=ShipmentStatus.planned,
+        updated_at=datetime(2026, 1, 18, 12, 30, tzinfo=timezone.utc),
+    ),
+    Shipment(
+        id="shp-1007",
+        **{"from": "mur-01", "to": "msk-01"},
+        status=ShipmentStatus.delivered,
+        updated_at=datetime(2026, 1, 17, 6, 0, tzinfo=timezone.utc),
+    ),
+    Shipment(
+        id="shp-1008",
+        **{"from": "sochi-01", "to": "msk-01"},
+        status=ShipmentStatus.cancelled,
+        updated_at=datetime(2026, 1, 16, 20, 0, tzinfo=timezone.utc),
+    ),
 ]
 
 

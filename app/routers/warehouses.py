@@ -9,6 +9,7 @@ router = APIRouter(prefix="/warehouses", tags=["warehouses"])
 # Временное хранилище "как будто БД".
 # Важно: это list[dict], поэтому ниже в коде используем доступ w["id"], w["status"].
 FAKE_WAREHOUSES = [
+    # База
     {
         "id": "spb-01",
         "name": "Saint Petersburg DC",
@@ -22,6 +23,50 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 55.7558,
         "lon": 37.6173,
+    },
+
+    # Новые города — чтобы на карте было больше точек
+    {
+        "id": "hel-01",
+        "name": "Helsinki Crossdock",
+        "status": "active",
+        "lat": 60.1699,
+        "lon": 24.9384,
+    },
+    {
+        "id": "kzn-01",
+        "name": "Kazan Sort Center",
+        "status": "active",
+        "lat": 55.7903,
+        "lon": 49.1347,
+    },
+    {
+        "id": "ekb-01",
+        "name": "Yekaterinburg Hub",
+        "status": "maintenance",
+        "lat": 56.8389,
+        "lon": 60.6057,
+    },
+    {
+        "id": "nsk-01",
+        "name": "Novosibirsk DC",
+        "status": "active",
+        "lat": 55.0084,
+        "lon": 82.9357,
+    },
+    {
+        "id": "mur-01",
+        "name": "Murmansk Arctic Depot",
+        "status": "active",
+        "lat": 68.9585,
+        "lon": 33.0827,
+    },
+    {
+        "id": "sochi-01",
+        "name": "Sochi Resort Hub",
+        "status": "closed",
+        "lat": 43.5855,
+        "lon": 39.7231,
     },
 ]
 
