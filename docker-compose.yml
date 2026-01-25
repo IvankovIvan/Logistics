@@ -1,25 +1,84 @@
 services:
+  # Reverse proxy: принимает весь входящий HTTP-трафик
   nginx:
     image: nginx:stable
+
+    # Пробрасываем порт 80 контейнера на 80 хоста
+    # Весь внешний доступ идёт через nginx
     ports:
       - "80:80"
+
+    # Монтируем конфиги nginx (default.conf и т.п.)
+    # nginx читает всё из /etc/nginx/conf.d
     volumes:
       - ./nginx:/etc/nginx/conf.d
+
+    # nginx должен стартовать ТОЛЬКО после того,
+    # как backend и frontend стали "healthy"
     depends_on:
-      - app
-      - web
+      app:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+    # Автоматический рестарт при падении контейнера
     restart: unless-stopped
 
+
+  # Backend: FastAPI (uvicorn)
   app:
+    # Собирается из ./app (Dockerfile в папке app)
     build: ./app
+
+    # Монтируем код внутрь контейнера
+    # Удобно для dev: правки на хосте сразу видны в контейнере
     volumes:
       - ./app:/app
+
+    # Healthcheck для backend:
+    # Проверяем, что FastAPI реально отвечает на /api/health
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          # Делаем HTTP-запрос внутри контейнера
+          # и проверяем, что в ответе есть 'ok'
+          "python -c \"import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health').read().decode())\" | grep -q 'ok'",
+        ]
+      interval: 10s     # проверять каждые 10 секунд
+      timeout: 3s       # таймаут запроса
+      retries: 10       # после 10 неудач → unhealthy
+
     restart: unless-stopped
 
+
+  # Frontend: Next.js (dev-режим)
   web:
     image: node:20-alpine
+
+    # Рабочая директория внутри контейнера
     working_dir: /web
+
+    # Монтируем код фронта
     volumes:
       - ./web:/web
+
+    # Dev-режим:
+    # - npm install (на старте)
+    # - next dev с биндингом на 0.0.0.0, чтобы nginx мог подключаться
     command: sh -lc "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+
+    # Healthcheck для фронта:
+    # Проверяем, что Next.js реально слушает порт 3000
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          # Делаем HTTP-запрос и считаем любой код < 500 успехом
+          "node -e \"require('http').get('http://127.0.0.1:3000',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
     restart: unless-stopped

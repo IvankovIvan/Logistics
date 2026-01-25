@@ -43,6 +43,9 @@ Check API routing:
 ```bash
 curl -i http://localhost/api/ | head
 ```
+Check health:
+```bash
+curl -sS http://localhost/api/health; echo
 
 Expected:
 - `/` → frontend (Next.js)

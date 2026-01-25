@@ -14,7 +14,7 @@ from models import (
 from routers.shipments import FAKE_SHIPMENTS
 from routers.warehouses import FAKE_WAREHOUSES
 
-router = APIRouter(prefix="/map", tags=["map"])
+router = APIRouter(prefix="/api/map", tags=["map"])
 
 TEnum = TypeVar("TEnum")
 
