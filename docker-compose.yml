@@ -1,66 +1,62 @@
-# docker-compose.yml
 # =====================================================
-# Этот файл поднимает:
-# 1) Backend (FastAPI на uvicorn)
-# 2) Frontend (Next.js в dev-режиме)
-# 3) nginx для проксирования фронта и бэка
+# Docker Compose для проекта: Nginx + FastAPI + Next.js
 # =====================================================
 
 services:
-
-  # -------------------------------------
-  # 1) Backend: FastAPI
-  # -------------------------------------
+  # ---------------------------------------------------
+  # 1️⃣ Backend: FastAPI
+  # ---------------------------------------------------
   app:
-    build: ./app                 # Собираем образ из Dockerfile в ./app
+    build: ./app                    # Строим образ из Dockerfile в папке ./app
     volumes:
-      - ./app:/app               # Монтируем код в контейнер (удобно для dev)
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-    # Healthcheck проверяет, что FastAPI реально отвечает на /api/health
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://127.0.0.1:8000/api/health | grep -q 'ok'"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-    restart: unless-stopped       # Перезапуск при падении
+      - ./app:/app                  # Монтируем локальный код внутрь контейнера
+    command: uvicorn main:app --host 0.0.0.0 --port 8000  # Старт FastAPI
+    healthcheck:                    # Проверка здоровья сервиса
+      test:
+        [
+          "CMD-SHELL",
+          # Делает HTTP-запрос к эндпоинту /api/health, ожидаем "ok"
+          "python3 -c \"import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health').read().decode())\" | grep -q 'ok'"
+        ]
+      interval: 10s                 # Проверка каждые 10 секунд
+      timeout: 3s                   # Таймаут одного запроса
+      retries: 10                   # После 10 неудач → unhealthy
+    restart: unless-stopped         # Автоматический рестарт при падении
 
-  # -------------------------------------
-  # 2) Frontend: Next.js (dev-режим)
-  # -------------------------------------
+  # ---------------------------------------------------
+  # 2️⃣ Frontend: Next.js
+  # ---------------------------------------------------
   web:
     image: node:20-bookworm-slim
-    working_dir: /web
+    working_dir: /web               # Рабочая директория в контейнере
     volumes:
-      - ./web:/web               # Монтируем код фронта
-    environment:
-      HTTP_PROXY: ${HTTP_PROXY:-}      # Прокси для скачивания npm-пакетов (опционально)
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-      NO_PROXY: "localhost,127.0.0.1,app,web,nginx"
-    # Dev-режим:
-    # 1) npm install подтягивает локальные node_modules (если есть)
-    # 2) next dev с биндингом на 0.0.0.0, чтобы nginx мог проксировать
-    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --hostname 0.0.0.0 --port 3000"
+      - ./web:/web                  # Монтируем локальный код фронта
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+                                     # Сначала ставим зависимости, потом запускаем dev сервер
     healthcheck:
-      test: ["CMD-SHELL",
-             "node -e \"require('http').get('http://127.0.0.1:3000', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""
-      ]
+      test:
+        [
+          "CMD-SHELL",
+          # Проверка что Next.js слушает порт 3000, любой код <500 считается успехом
+          "node -e \"require('http').get('http://127.0.0.1:3000', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""
+        ]
       interval: 10s
       timeout: 3s
       retries: 20
     restart: unless-stopped
 
-  # -------------------------------------
-  # 3) Reverse proxy: nginx
-  # -------------------------------------
+  # ---------------------------------------------------
+  # 3️⃣ Reverse proxy: Nginx
+  # ---------------------------------------------------
   nginx:
     image: nginx:stable
     ports:
-      - "80:80"                 # Проброс порта 80 на хост
+      - "80:80"                     # Проброс порта 80 контейнера на хост
     volumes:
-      - ./nginx:/etc/nginx/conf.d   # Монтируем конфиги nginx (default.conf)
+      - ./nginx:/etc/nginx/conf.d   # Монтируем локальный конфиг nginx
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_healthy  # Nginx стартует только после healthy backend
       web:
-        condition: service_healthy
-    restart: unless-stopped
+        condition: service_healthy  # И после healthy frontend
+    restart: unless-stopped          # Автоматический рестарт при падении
