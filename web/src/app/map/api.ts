@@ -1,6 +1,5 @@
-// web/src/app/map/api.ts
-// Здесь вся работа с API карты: типы ответа + один запрос.
-// Зачем: page.tsx и MapView не должны знать, как именно мы ходим в бек.
+// Module: карта API-контракты и единый запрос.
+// Invariants: один endpoint, одна точка формирования ошибок, без знаний о UI/SDK.
 
 export type MapWarehouse = {
   id: string;
@@ -29,8 +28,8 @@ export type MapResponse = {
  * - не кешируем (карта "на сейчас")
  * - при не-200 вытаскиваем текст (чтобы увидеть HTML 502/trace и т.п.)
  */
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { cache: "no-store", signal });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${url} -> ${res.status} ${res.statusText}\n${text}`);
@@ -42,6 +41,6 @@ async function fetchJson<T>(url: string): Promise<T> {
  * Данные для карты одним запросом.
  * Этот endpoint уже есть в бекенде: /api/map
  */
-export async function fetchMap(): Promise<MapResponse> {
-  return fetchJson<MapResponse>("/api/map");
+export async function fetchMap(signal?: AbortSignal): Promise<MapResponse> {
+  return fetchJson<MapResponse>("/api/map", signal);
 }
