@@ -12,28 +12,73 @@ from models import (
     WarehouseStatus,
 )
 
+from services.data_sources.base import CurrentStateDataSource
+from services.data_sources.fake import FakeDataSource
+
+
+# ============================================================================
+# Источник current-state данных для карты
+# ----------------------------------------------------------------------------
+# ВАЖНО:
+# - map_builder НЕ знает, откуда берутся данные (FAKE / БД / кэш)
+# - он работает только с read-интерфейсом CurrentStateDataSource
+# - замена источника НЕ должна менять логику ниже
+# ============================================================================
+_data_source: CurrentStateDataSource = FakeDataSource()
+
 
 def build_map_response(
-    warehouses_source: Iterable[WarehouseLike | Mapping[str, object]],
-    shipments_source: Iterable[ShipmentLike | Mapping[str, object]],
+    warehouses_source: Iterable[WarehouseLike | Mapping[str, object]] | None = None,
+    shipments_source: Iterable[ShipmentLike | Mapping[str, object]] | None = None,
 ) -> MapResponse:
     """
-    Собирает данные карты из источников (FAKE_* или будущая БД/ингест).
-    Здесь менять сборку, если модель данных или источники изменятся.
+    Собирает витрину карты (/api/map) из current-state данных.
+
+    Назначение функции:
+    - превратить *текущее состояние логистики* в MapResponse
+    - нормализовать входные данные (dict / pydantic / domain-модели)
+    - вычислить derived-данные (статусы, координаты маршрутов)
+
+    ВАЖНЫЕ ИНВАРИАНТЫ:
+    - функция НЕ знает про ingest, события и БД
+    - функция НЕ хранит состояние
+    - функция НЕ меняет данные, только интерпретирует их
+    - контракт MapResponse стабилен
+
+    Источники данных:
+    - по умолчанию используются данные из CurrentStateDataSource
+    - аргументы warehouses_source / shipments_source оставлены
+      для тестов и явной подстановки источников
     """
 
+    # ------------------------------------------------------------------------
+    # 0) Получение current-state данных
+    # ------------------------------------------------------------------------
+    # Если источники не переданы явно — читаем snapshot из data source.
+    if warehouses_source is None:
+        warehouses_source = _data_source.get_warehouses()
+
+    if shipments_source is None:
+        shipments_source = _data_source.get_shipments()
+
+    # ------------------------------------------------------------------------
     # 1) Склады: собираем geo-словарь id -> (lon, lat)
+    # ------------------------------------------------------------------------
     warehouses: list[MapWarehouse] = []
     geo: dict[str, tuple[float, float]] = {}
 
     for raw in warehouses_source:
         w = normalize_warehouse(raw)
+
         if getattr(w, "lon", None) is None or getattr(w, "lat", None) is None:
-            # Без координат точку на карту не ставим (иначе падает типизация/рендер).
+            # Без координат точку на карту не ставим:
+            # - фронт не умеет рендерить "пустые" точки
+            # - карта должна быть устойчивой к частичным данным
             continue
 
         lon = float(w.lon)
         lat = float(w.lat)
+
         w_status = coerce_enum(
             getattr(w, "status", None),
             WarehouseStatus,
@@ -42,6 +87,7 @@ def build_map_response(
 
         wid = str(w.id)
         name = str(w.name)
+
         warehouses.append(
             MapWarehouse(
                 id=wid,
@@ -51,20 +97,26 @@ def build_map_response(
                 lat=lat,
             )
         )
+
         geo[wid] = (lon, lat)
 
-    # 2) Маршруты: shipments могут быть pydantic-моделями или dict
+    # ------------------------------------------------------------------------
+    # 2) Маршруты: shipments могут быть dict или доменными моделями
+    # ------------------------------------------------------------------------
     routes: list[MapRoute] = []
 
     for raw in shipments_source:
         s = normalize_shipment(raw)
+
         from_id = str(s.from_node)
         to_id = str(s.to_node)
 
         from_geo = geo.get(from_id)
         to_geo = geo.get(to_id)
+
         if from_geo is None or to_geo is None:
-            # Если складов нет в geo (нет координат/нет такого id) — линию не рисуем.
+            # Если хотя бы одной точки нет — маршрут не рисуем
+            # (нет координат или склад отсутствует в current-state)
             continue
 
         status = coerce_enum(
@@ -80,7 +132,7 @@ def build_map_response(
             MapRoute(
                 id=str(s.id),
                 status=status,
-                **{"from": from_id, "to": to_id},  # from/to — ключевые слова в python
+                **{"from": from_id, "to": to_id},  # from/to — ключевые слова Python
                 coordinates=[
                     (from_lon, from_lat),
                     (to_lon, to_lat),
@@ -88,4 +140,10 @@ def build_map_response(
             )
         )
 
-    return MapResponse(warehouses=warehouses, routes=routes)
+    # ------------------------------------------------------------------------
+    # 3) Финальная витрина карты
+    # ------------------------------------------------------------------------
+    return MapResponse(
+        warehouses=warehouses,
+        routes=routes,
+    )

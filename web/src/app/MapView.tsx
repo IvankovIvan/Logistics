@@ -165,22 +165,6 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         },
       });
 
-      // Popup по клику на маршрут
-      map.on("click", "routes-line", (e) => {
-        const f = e.features?.[0];
-        if (!f || !f.properties) return;
-        const p = f.properties as any;
-
-        new maplibregl.Popup()
-          .setLngLat(e.lngLat)
-          .setText(`Shipment ${p.id} (${p.status}) ${p.from} -> ${p.to}`)
-          .addTo(map);
-      });
-
-      // Курсор “pointer” на линиях
-      map.on("mouseenter", "routes-line", () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", "routes-line", () => (map.getCanvas().style.cursor = ""));
-
       // Автозум только один раз — при первом успешном добавлении данных.
       // Это предотвращает “дёргание камеры” при будущих обновлениях данных.
       if (bounds) {
