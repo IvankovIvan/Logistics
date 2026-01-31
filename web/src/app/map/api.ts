@@ -1,5 +1,11 @@
 // Module: карта API-контракты и единый запрос.
-// Invariants: один endpoint, одна точка формирования ошибок, без знаний о UI/SDK.
+//
+// Инварианты:
+// - один endpoint для карты: /api/map
+// - одна точка формирования ошибок (fetchJson)
+// - без знаний о UI/MapLibre (это чистый data-layer)
+// - cache: "no-store" потому что экран показывает "на сейчас"
+// - optional AbortSignal нужен для polling/abort-protection
 
 export type MapWarehouse = {
   id: string;
@@ -11,10 +17,15 @@ export type MapWarehouse = {
 
 export type MapRoute = {
   id: string;
-  status: string; // "planned" | "in_transit" | ...
+
+  // Сейчас строкой, чтобы не ломать контракт на уровне UI.
+  // Можно ужесточить до union-типа позже (planned/in_transit/...).
+  status: string;
+
   from: string;
   to: string;
-  // Важно: бек отдаёт [[lon,lat],[lon,lat]]
+
+  // Важно: бек отдаёт [[lon,lat],[lon,lat],...]
   coordinates: [number, number][];
 };
 
@@ -30,16 +41,18 @@ export type MapResponse = {
  */
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, { cache: "no-store", signal });
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${url} -> ${res.status} ${res.statusText}\n${text}`);
   }
+
   return (await res.json()) as T;
 }
 
 /**
  * Данные для карты одним запросом.
- * Этот endpoint уже есть в бекенде: /api/map
+ * Endpoint есть в бекенде: /api/map
  */
 export async function fetchMap(signal?: AbortSignal): Promise<MapResponse> {
   return fetchJson<MapResponse>("/api/map", signal);
