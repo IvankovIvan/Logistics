@@ -1,5 +1,6 @@
 # =====================================================
 # Docker Compose для проекта: Nginx + FastAPI + Next.js
+# + Postgres/PostGIS + Redis (инфраструктура, без кода)
 # =====================================================
 
 services:
@@ -10,7 +11,23 @@ services:
     build: ./app                    # Строим образ из Dockerfile в папке ./app
     volumes:
       - ./app:/app                  # Монтируем локальный код внутрь контейнера
-    command: uvicorn main:app --host 0.0.0.0 --port 8000  # Старт FastAPI
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+                                     # Старт FastAPI (dev-режим)
+    environment:
+      # ------------------------------------------------
+      # Переменные БД и Redis
+      # ⚠️ Пока НЕ используются кодом
+      # Добавлены заранее под Project №1.1
+      # ------------------------------------------------
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: logistics
+      POSTGRES_USER: logistics
+      POSTGRES_PASSWORD: logistics
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
     healthcheck:                    # Проверка здоровья сервиса
       test:
         [
@@ -59,4 +76,59 @@ services:
         condition: service_healthy  # Nginx стартует только после healthy backend
       web:
         condition: service_healthy  # И после healthy frontend
-    restart: unless-stopped          # Автоматический рестарт при падении
+    restart: unless-stopped
+
+  # ---------------------------------------------------
+  # 4️⃣ Database: PostgreSQL + PostGIS
+  # ---------------------------------------------------
+  postgres:
+    image: postgis/postgis:16-3.4
+                                     # PostgreSQL 16 + PostGIS
+                                     # Будет использоваться как current-state DB
+    environment:
+      POSTGRES_DB: logistics
+      POSTGRES_USER: logistics
+      POSTGRES_PASSWORD: logistics
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+                                     # Persist данные БД между перезапусками
+    ports:
+      - "5432:5432"                  # Проброс порта для локального подключения (psql, IDE)
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U logistics -d logistics"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------
+  # 5️⃣ Redis (будущий broker / backend для Celery)
+  # ---------------------------------------------------
+  redis:
+    image: redis:7-alpine
+                                     # Лёгкий Redis, без конфигов
+    ports:
+      - "6379:6379"                  # Проброс для отладки
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "ping"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+# ---------------------------------------------------
+# Volumes (persistency)
+# ---------------------------------------------------
+volumes:
+  postgres_data:
+    # Хранилище данных PostgreSQL
+    # Удаляется только вручную (docker volume rm)
