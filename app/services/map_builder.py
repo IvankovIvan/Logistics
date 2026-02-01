@@ -1,3 +1,4 @@
+# app/services/ingest/map_builder.py
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
@@ -24,7 +25,7 @@ from services.data_sources.selector import get_current_state_data_source
 # - он работает только с read-интерфейсом CurrentStateDataSource
 # - замена источника НЕ должна менять логику ниже
 # ============================================================================
-_data_source: CurrentStateDataSource = get_current_state_data_source()
+# _data_source: CurrentStateDataSource = get_current_state_data_source()
 
 
 def build_map_response(
@@ -52,17 +53,22 @@ def build_map_response(
     """
 
     # ------------------------------------------------------------------------
-    # 0) Получение current-state данных
+    # 0) Выбор current-state источника (на каждый вызов)
+    # ------------------------------------------------------------------------
+    data_source: CurrentStateDataSource = get_current_state_data_source()
+
+    # ------------------------------------------------------------------------
+    # 1) Получение current-state данных
     # ------------------------------------------------------------------------
     # Если источники не переданы явно — читаем snapshot из data source.
     if warehouses_source is None:
-        warehouses_source = _data_source.get_warehouses()
+        warehouses_source = data_source.get_warehouses()
 
     if shipments_source is None:
-        shipments_source = _data_source.get_shipments()
+        shipments_source = data_source.get_shipments()
 
     # ------------------------------------------------------------------------
-    # 1) Склады: собираем geo-словарь id -> (lon, lat)
+    # 2) Склады: собираем geo-словарь id -> (lon, lat)
     # ------------------------------------------------------------------------
     warehouses: list[MapWarehouse] = []
     geo: dict[str, tuple[float, float]] = {}
@@ -101,7 +107,7 @@ def build_map_response(
         geo[wid] = (lon, lat)
 
     # ------------------------------------------------------------------------
-    # 2) Маршруты: shipments могут быть dict или доменными моделями
+    # 3) Маршруты: shipments могут быть dict или доменными моделями
     # ------------------------------------------------------------------------
     routes: list[MapRoute] = []
 
@@ -141,7 +147,7 @@ def build_map_response(
         )
 
     # ------------------------------------------------------------------------
-    # 3) Финальная витрина карты
+    # 4) Финальная витрина карты
     # ------------------------------------------------------------------------
     return MapResponse(
         warehouses=warehouses,

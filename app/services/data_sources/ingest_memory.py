@@ -35,8 +35,8 @@ class InMemoryIngestDataSource(CurrentStateDataSource):
         return [
             {
                 "id": payload.id,
-                "from_warehouse_id": payload.from_warehouse_id,
-                "to_warehouse_id": payload.to_warehouse_id,
+                "from_node": payload.from_warehouse_id,
+                "to_node": payload.to_warehouse_id,
                 "status": payload.status,
             }
             for payload in (
