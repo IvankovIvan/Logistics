@@ -35,7 +35,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      DATA_SOURCE_MODE: ${DATA_SOURCE_MODE:-fake} #ingest-источником
+      DATA_SOURCE_MODE: postgres # ${DATA_SOURCE_MODE:-fake} #ingest-источником
 
     healthcheck:                    # Проверка здоровья сервиса
       test:
