@@ -1,3 +1,4 @@
+#docker-compose.yml
 # =====================================================
 # Docker Compose для проекта: Nginx + FastAPI + Next.js
 # + Postgres/PostGIS + Redis (инфраструктура, без кода)
@@ -8,12 +9,18 @@ services:
   # 1️⃣ Backend: FastAPI
   # ---------------------------------------------------
   app:
-    build: ./app                    # Строим образ из Dockerfile в папке ./app
+    build:                          # Строим образ из Dockerfile в папке ./app
+      context: ./app
+      dockerfile: Dockerfile
+    # build: ./app                    # Строим образ из Dockerfile в папке ./app
+    working_dir: /app
     volumes:
-      - ./app:/app                  # Монтируем локальный код внутрь контейнера
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+      - ./app:/app                # Монтируем локальный код внутрь контейнера
+    #command: uvicorn main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
                                      # Старт FastAPI (dev-режим)
     environment:
+      PYTHONPATH: /
       # ------------------------------------------------
       # Переменные БД и Redis
       # ⚠️ Пока НЕ используются кодом

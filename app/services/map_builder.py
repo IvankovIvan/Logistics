@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
-from domain.coercion import coerce_enum, normalize_shipment, normalize_warehouse
-from domain.protocols import ShipmentLike, WarehouseLike
+from app.domain.coercion import coerce_enum, normalize_shipment, normalize_warehouse
+from app.domain.protocols import ShipmentLike, WarehouseLike
 from models import (
     MapResponse,
     MapRoute,
@@ -13,8 +13,8 @@ from models import (
     WarehouseStatus,
 )
 
-from services.data_sources.base import CurrentStateDataSource
-from services.data_sources.selector import get_current_state_data_source
+from app.services.data_sources.base import CurrentStateDataSource
+from app.services.data_sources.selector import get_current_state_data_source
 
 
 # ============================================================================

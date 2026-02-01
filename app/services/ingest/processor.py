@@ -2,12 +2,12 @@
 from datetime import datetime
 from typing import Set, List
 
-from models.ingest import (
+from app.models.ingest import (
     IngestBatch,
     IngestBatchResult,
     IngestEventResult,
 )
-from services.ingest.rules import apply_event
+from app.services.ingest.rules import apply_event
 
 
 # =====================================================

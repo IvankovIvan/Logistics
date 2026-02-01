@@ -1,11 +1,11 @@
 # app/routers/ingest.py
 from fastapi import APIRouter, status
 
-from models.ingest import (
+from app.models.ingest import (
     IngestBatch,
     IngestBatchResult,
 )
-from services.ingest.processor import process_ingest_batch
+from app.services.ingest.processor import process_ingest_batch
 
 
 router = APIRouter(

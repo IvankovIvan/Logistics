@@ -1,9 +1,9 @@
 # app/services/data_sources/selector.py
 import os
 
-from services.data_sources.base import CurrentStateDataSource
-from services.data_sources.fake import FakeDataSource
-from services.data_sources.ingest_memory import InMemoryIngestDataSource
+from app.services.data_sources.base import CurrentStateDataSource
+from app.services.data_sources.fake import FakeDataSource
+from app.services.data_sources.ingest_memory import InMemoryIngestDataSource
 
 
 def get_current_state_data_source() -> CurrentStateDataSource:

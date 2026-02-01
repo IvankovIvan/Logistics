@@ -2,7 +2,7 @@
 from typing import List, Dict
 from datetime import datetime
 
-from services.data_sources.base import CurrentStateDataSource
+from app.services.data_sources.base import CurrentStateDataSource
 from routers.warehouses import FAKE_WAREHOUSES
 from routers.shipments import FAKE_SHIPMENTS
 
@@ -28,8 +28,8 @@ class FakeDataSource(CurrentStateDataSource):
         return [
             {
                 "id": s.id,
-                "from_warehouse_id": s.from_node,
-                "to_warehouse_id": s.from_node,
+                "from_node": s.from_node,
+                "to_node": s.to_node,
                 "status": s.status,
             }
             for s in FAKE_SHIPMENTS

@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from models import MapResponse
-from services.map_builder import build_map_response
+from app.services.map_builder import build_map_response
 
 """
 HTTP-роутер /api/map

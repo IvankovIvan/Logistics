@@ -1,8 +1,8 @@
 # app/services/data_sources/ingest_memory.py
 from typing import List, Dict
 
-from services.data_sources.base import CurrentStateDataSource
-from services.ingest.rules import _warehouses_state, _shipments_state
+from app.services.data_sources.base import CurrentStateDataSource
+from app.services.ingest.rules import _warehouses_state, _shipments_state
 
 
 class InMemoryIngestDataSource(CurrentStateDataSource):

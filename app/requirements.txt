@@ -1,2 +1,4 @@
+# app/requirements.txt
 fastapi
 uvicorn
+pytest

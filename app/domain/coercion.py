@@ -5,7 +5,7 @@ from enum import Enum
 from types import SimpleNamespace
 from typing import Type, TypeVar
 
-from domain.protocols import ShipmentLike, WarehouseLike
+from app.domain.protocols import ShipmentLike, WarehouseLike
 
 TEnum = TypeVar("TEnum", bound=Enum)
 

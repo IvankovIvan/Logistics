@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Dict, Any
 
-from models.ingest import (
+from app.models.ingest import (
     IngestEvent,
     WarehouseIngestEvent,
     ShipmentIngestEvent,

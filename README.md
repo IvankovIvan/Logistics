@@ -99,3 +99,6 @@ curl -sS http://localhost/api/map
 - добавить ingest
 - витрину “на сейчас”
 - исторические маршруты
+
+
+NAT / egress-шлюз socks5://127.0.0.1:1080
