@@ -7,9 +7,11 @@ main.py должен импортировать роутеры ТОЛЬКО от
 from .warehouses import router as warehouses_router
 from .shipments import router as shipments_router
 from .map import router as map_router
+from .ingest import router as ingest_router
 
 __all__ = [
     "warehouses_router",
     "shipments_router",
     "map_router",
+    "ingest_router",
 ]
