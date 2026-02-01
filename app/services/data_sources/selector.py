@@ -4,6 +4,7 @@ import os
 from app.services.data_sources.base import CurrentStateDataSource
 from app.services.data_sources.fake import FakeDataSource
 from app.services.data_sources.ingest_memory import InMemoryIngestDataSource
+from app.services.data_sources.postgres import PostgresDataSource
 
 
 def get_current_state_data_source() -> CurrentStateDataSource:
@@ -21,6 +22,8 @@ def get_current_state_data_source() -> CurrentStateDataSource:
 
     if mode == "ingest_mem":
         return InMemoryIngestDataSource()
+    elif mode == "postgres":
+        return PostgresDataSource()
 
     # default / fallback
     return FakeDataSource()

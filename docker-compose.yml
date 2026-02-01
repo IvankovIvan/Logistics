@@ -100,6 +100,7 @@ services:
       POSTGRES_PASSWORD: logistics
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
                                      # Persist данные БД между перезапусками
     ports:
       - "5432:5432"                  # Проброс порта для локального подключения (psql, IDE)

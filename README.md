@@ -102,3 +102,7 @@ curl -sS http://localhost/api/map
 
 
 NAT / egress-шлюз socks5://127.0.0.1:1080
+
+ubuntu@s205:~/infra/nginx/app$ source .venv/bin/activate
+(.venv) ubuntu@s205:~/infra/nginx/app$
+pip install psycopg[binary]
