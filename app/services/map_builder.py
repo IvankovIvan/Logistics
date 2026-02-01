@@ -13,7 +13,7 @@ from models import (
 )
 
 from services.data_sources.base import CurrentStateDataSource
-from services.data_sources.fake import FakeDataSource
+from services.data_sources.selector import get_current_state_data_source
 
 
 # ============================================================================
@@ -24,7 +24,7 @@ from services.data_sources.fake import FakeDataSource
 # - он работает только с read-интерфейсом CurrentStateDataSource
 # - замена источника НЕ должна менять логику ниже
 # ============================================================================
-_data_source: CurrentStateDataSource = FakeDataSource()
+_data_source: CurrentStateDataSource = get_current_state_data_source()
 
 
 def build_map_response(
