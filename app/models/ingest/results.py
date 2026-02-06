@@ -19,7 +19,7 @@ class IngestEventResult(BaseModel):
         description="event_id исходного ingest-события"
     )
 
-    status: Literal["applied", "duplicate", "rejected"] = Field(
+    status: Literal["applied", "duplicate", "rejected", "stale"] = Field(
         ...,
         description="Итог обработки события"
     )

@@ -33,25 +33,6 @@ router = APIRouter(
         "- read-side (/api/map) обновляется автоматически"
     ),
 )
-
-
-@router.post(
-    "/batch",
-    response_model=IngestBatchResult,
-    status_code=status.HTTP_200_OK,
-    summary="Batch ingest current-state events",
-    description=(
-        "Принимает batch ingest-событий текущего состояния.\n\n"
-        "- события обрабатываются независимо\n"
-        "- частичный успех является нормой\n"
-        "- порядок событий не имеет значения\n"
-        "- идемпотентность обеспечивается по event_id\n\n"
-        "Write-side:\n"
-        "- PostgreSQL current-state storage\n"
-        "- синхронная обработка\n"
-        "- read-side (/api/map) обновляется автоматически"
-    ),
-)
 def ingest_batch(batch: IngestBatch) -> IngestBatchResult:
     """
     HTTP-адаптер write-side ingest.
@@ -61,15 +42,14 @@ def ingest_batch(batch: IngestBatch) -> IngestBatchResult:
     - преобразовать результат в API-контракт
     """
     service_result = ingest_events(batch.events)
-    applied_ids = set(service_result["applied_event_ids"])
-
+    # ingest-service возвращает точные статусы per-event
     results = [
         IngestEventResult(
-            event_id=ev.event_id,
-            status="applied" if ev.event_id in applied_ids else "duplicate",
-            reason=None,
+            event_id=ev_result["event_id"],
+            status=ev_result["status"],
+            reason=ev_result.get("reason"),
         )
-        for ev in batch.events
+        for ev_result in service_result["event_results"]
     ]
 
     return IngestBatchResult(

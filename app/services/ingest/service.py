@@ -18,12 +18,15 @@ def ingest_events(events: Iterable):
     - ingest-service НЕ знает про FastAPI
     - payload приводится к dict[str, primitive]
     - enum → value
+    - applied возвращается ТОЛЬКО если current-state реально изменён
     """
+
     received = 0
     inserted = 0
     applied = 0
 
     applied_event_ids: list[str] = []
+    event_results: list[dict[str, object | None]] = []
 
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -38,12 +41,12 @@ def ingest_events(events: Iterable):
                 else:
                     payload = dict(ev.payload)
 
-                # enum → value (строка)
+                # enum → value
                 if "status" in payload and hasattr(payload["status"], "value"):
                     payload["status"] = payload["status"].value
 
                 # -------------------------------------------------
-                # 1) Idempotency
+                # 1) Idempotency (event_id)
                 # -------------------------------------------------
                 cur.execute(
                     INSERT_INGEST_EVENT,
@@ -56,6 +59,14 @@ def ingest_events(events: Iterable):
                 )
 
                 if cur.rowcount == 0:
+                    # event_id уже был — это duplicate
+                    event_results.append(
+                        {
+                            "event_id": ev.event_id,
+                            "status": "duplicate",
+                            "reason": "event_id already processed",
+                        }
+                    )
                     continue
 
                 inserted += 1
@@ -75,8 +86,7 @@ def ingest_events(events: Iterable):
                             "event_time": ev.event_time,
                         },
                     )
-                    applied += cur.rowcount
-                    applied_event_ids.append(ev.event_id)
+                    applied_rowcount = cur.rowcount
 
                 elif ev.entity_type == "shipment":
                     cur.execute(
@@ -89,12 +99,43 @@ def ingest_events(events: Iterable):
                             "event_time": ev.event_time,
                         },
                     )
-                    applied += cur.rowcount
-                    applied_event_ids.append(ev.event_id)
+                    applied_rowcount = cur.rowcount
 
                 else:
-                    # защита от мусора
+                    # неизвестный entity_type → rejected
+                    event_results.append(
+                        {
+                            "event_id": ev.event_id,
+                            "status": "rejected",
+                            "reason": "unsupported entity_type",
+                        }
+                    )
                     continue
+
+                # -------------------------------------------------
+                # 3) Result classification
+                # -------------------------------------------------
+                # UPSERT может не примениться, если событие устарело
+                # (WHERE last_event_time <= EXCLUDED.last_event_time)
+                if applied_rowcount > 0:
+                    applied += applied_rowcount
+                    applied_event_ids.append(ev.event_id)
+                    event_results.append(
+                        {
+                            "event_id": ev.event_id,
+                            "status": "applied",
+                            "reason": None,
+                        }
+                    )
+                else:
+                    # корректный stale
+                    event_results.append(
+                        {
+                            "event_id": ev.event_id,
+                            "status": "stale",
+                            "reason": "stale event_time",
+                        }
+                    )
 
         conn.commit()
 
@@ -103,4 +144,5 @@ def ingest_events(events: Iterable):
         "inserted": inserted,
         "applied": applied,
         "applied_event_ids": applied_event_ids,
+        "event_results": event_results,
     }
