@@ -19,6 +19,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { FilterSpecification } from "maplibre-gl";
 
 import type { MapBounds } from "./map/transform";
 
@@ -43,10 +44,75 @@ type MapViewProps = {
   onReady?: () => void;
 };
 
+// Phase 3 (маршруты):
+// Визуальная агрегация ТОЛЬКО по направлению from -> to.
+// Инвариант:
+// - не теряем направление,
+// - не дорисовываем несуществующие стороны,
+// - используем только существующие поля данных.
+function buildDirectionalRoutes(
+  routes: GeoJSON.FeatureCollection<
+    GeoJSON.LineString,
+    { id: string; status: string; from: string; to: string }
+  >
+): GeoJSON.FeatureCollection<
+  GeoJSON.LineString,
+  {
+    label: string;
+    direction: "forward" | "backward";
+  }
+> {
+  const features: GeoJSON.Feature<
+    GeoJSON.LineString,
+    { label: string; direction: "forward" | "backward" }
+  >[] = [];
+
+  for (const f of routes.features) {
+    const { id, from, to } = f.properties;
+
+    // Направление определяем ТОЛЬКО по данным, без догадок.
+    // Для консистентности считаем:
+    // - from < to  => forward
+    // - from > to  => backward
+    const direction: "forward" | "backward" =
+      from < to ? "forward" : "backward";
+
+    features.push({
+      type: "Feature",
+      geometry: f.geometry,
+      properties: {
+        label: String(id), // label = значение из существующих данных
+        direction,
+      },
+    });
+  }
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+// Phase 4 (маршруты): вычисляем точку по центру линии для tooltip.
+// Инвариант: локальное вычисление, без изменения данных.
+function getLineMidpoint(line: GeoJSON.LineString): [number, number] {
+  const coords = line.coordinates;
+  if (coords.length === 0) return [0, 0];
+
+  const midIndex = Math.floor(coords.length / 2);
+  const p = coords[midIndex];
+
+  // Position -> [number, number]
+  return [p[0], p[1]];
+}
+
 export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onReady }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const warehousePopupRef = useRef<maplibregl.Popup | null>(null);
+  const routePopupRef = useRef<maplibregl.Popup | null>(null);
+  const routeHoverLabelRef = useRef<string | null>(null);
+  const routeHoverDirectionRef = useRef<"forward" | "backward" | null>(null);
 
   // Флаг "мы уже добавили sources/layers/listeners" — чтобы не дублировать.
   const hasSourcesRef = useRef(false);
@@ -123,7 +189,12 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
 
       // Sources (GeoJSON)
       map.addSource("warehouses", { type: "geojson", data: warehousesGeoJson });
-      map.addSource("routes", { type: "geojson", data: routesGeoJson });
+      // Phase 3: визуальная агрегация маршрутов выполняется перед рендером,
+      // но данные не изменяются (только setData на derived source).
+      map.addSource("routes", {
+        type: "geojson",
+        data: buildDirectionalRoutes(routesGeoJson),
+      });
 
       // Слой складов (точки)
       map.addLayer({
@@ -170,25 +241,154 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         },
       });
 
-      // Слой маршрутов (линии)
+      // Phase 3 (маршруты):
+      // Разведение направлений ТОЛЬКО по существующим данным.
+      // Если направления нет — линия не рисуется (сторона пустая).
       map.addLayer({
-        id: "routes-line",
+        id: "routes-line-forward",
         type: "line",
         source: "routes",
+        minzoom: 4,
+        filter: ["==", ["get", "direction"], "forward"],
+        paint: {
+          "line-width": 2,
+          "line-opacity": 0.75,
+          "line-color": "#64748b",
+          "line-offset": 2, // forward -> одна сторона
+        },
+      });
+
+      map.addLayer({
+        id: "routes-line-backward",
+        type: "line",
+        source: "routes",
+        minzoom: 4,
+        filter: ["==", ["get", "direction"], "backward"],
+        paint: {
+          "line-width": 2,
+          "line-opacity": 0.75,
+          "line-color": "#64748b",
+          "line-offset": -2, // backward -> другая сторона
+        },
+      });
+
+      // Phase 4 (hover): используем отдельные hover-слои, а не feature-state,
+      // потому что feature-state требует id на фичах (это бы меняло GeoJSON).
+      map.addLayer({
+        id: "routes-line-forward-hover",
+        type: "line",
+        source: "routes",
+        minzoom: 4,
+        filter: ["==", ["get", "label"], ""],
         paint: {
           "line-width": 3,
           "line-opacity": 0.9,
-          "line-color": [
-            "match",
-            ["get", "status"],
-            "in_transit",
-            "#16a34a",
-            "planned",
-            "#f59e0b",
-            "#6b7280",
-          ],
+          "line-color": "#1f2937",
+          "line-offset": 2,
         },
       });
+
+      map.addLayer({
+        id: "routes-line-backward-hover",
+        type: "line",
+        source: "routes",
+        minzoom: 4,
+        filter: ["==", ["get", "label"], ""],
+        paint: {
+          "line-width": 3,
+          "line-opacity": 0.9,
+          "line-color": "#1f2937",
+          "line-offset": -2,
+        },
+      });
+
+      // Phase 3 (подпись маршрута): число по центру линии, отдельный symbol layer.
+      map.addLayer({
+        id: "routes-labels",
+        type: "symbol",
+        source: "routes",
+        minzoom: 5,
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ["get", "label"],
+          "text-size": 11,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+          "text-rotation-alignment": "map",
+          "text-keep-upright": true,
+        },
+        paint: {
+          "text-color": "#475569",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1,
+        },
+      });
+
+      const emptyFilter: FilterSpecification = ["==", ["get", "label"], ""];
+
+      // Phase 4 (hover): подсветка конкретной линии + tooltip по центру.
+      const setRouteHover = (
+        direction: "forward" | "backward",
+        label: string | null
+      ) => {
+        const hoverFilter: FilterSpecification =
+          label === null
+            ? emptyFilter
+            : [
+                "all",
+                ["==", ["get", "direction"], direction],
+                ["==", ["get", "label"], label],
+              ];
+
+        if (direction === "forward") {
+          map.setFilter("routes-line-forward-hover", hoverFilter);
+          map.setFilter("routes-line-backward-hover", emptyFilter);
+        } else {
+          map.setFilter("routes-line-backward-hover", hoverFilter);
+          map.setFilter("routes-line-forward-hover", emptyFilter);
+        }
+      };
+
+      const handleRouteEnter = (
+        direction: "forward" | "backward",
+        e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }
+      ) => {
+        const f = e.features?.[0];
+        if (!f) return;
+
+        const props = (f.properties ?? {}) as { label?: string };
+        const label = props.label ? String(props.label) : "";
+        if (!label) return;
+
+        routeHoverLabelRef.current = label;
+        routeHoverDirectionRef.current = direction;
+        setRouteHover(direction, label);
+
+        const midpoint = getLineMidpoint(f.geometry as GeoJSON.LineString);
+        if (!routePopupRef.current) {
+          routePopupRef.current = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+          });
+        }
+
+        routePopupRef.current.setLngLat(midpoint).setText(`Route ${label}`).addTo(map);
+        map.getCanvas().style.cursor = "pointer";
+      };
+
+      const handleRouteLeave = () => {
+        routeHoverLabelRef.current = null;
+        routeHoverDirectionRef.current = null;
+        setRouteHover("forward", null);
+        setRouteHover("backward", null);
+        routePopupRef.current?.remove();
+        map.getCanvas().style.cursor = "";
+      };
+
+      map.on("mouseenter", "routes-line-forward", (e) => handleRouteEnter("forward", e));
+      map.on("mouseenter", "routes-line-backward", (e) => handleRouteEnter("backward", e));
+      map.on("mouseleave", "routes-line-forward", handleRouteLeave);
+      map.on("mouseleave", "routes-line-backward", handleRouteLeave);
 
       // Phase 2 (hover tooltip): показываем только число (id из текущих данных), без изменения стиля точки.
       const handleWarehouseEnter = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
@@ -234,7 +434,29 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
     const routesSource = map.getSource("routes") as GeoJSONSource | undefined;
 
     warehousesSource?.setData(warehousesGeoJson);
-    routesSource?.setData(routesGeoJson);
+    routesSource?.setData(buildDirectionalRoutes(routesGeoJson));
+
+    // Phase 4: сохраняем hover-состояние при обновлении данных (только setData).
+    if (routeHoverLabelRef.current && routeHoverDirectionRef.current) {
+      const label = routeHoverLabelRef.current;
+      const direction = routeHoverDirectionRef.current;
+
+      const activeFilter: FilterSpecification = [
+        "all",
+        ["==", ["get", "direction"], direction],
+        ["==", ["get", "label"], label],
+      ];
+
+      const emptyFilter: FilterSpecification = ["==", ["get", "label"], ""];
+
+      if (direction === "forward") {
+        map.setFilter("routes-line-forward-hover", activeFilter);
+        map.setFilter("routes-line-backward-hover", emptyFilter);
+      } else {
+        map.setFilter("routes-line-backward-hover", activeFilter);
+        map.setFilter("routes-line-forward-hover", emptyFilter);
+      }
+    }
   }, [isStyleLoaded, warehousesGeoJson, routesGeoJson, bounds]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
