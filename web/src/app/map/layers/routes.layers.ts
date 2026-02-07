@@ -1,30 +1,24 @@
 // file: web/src/app/map/layers/routes.layers.ts
-// routes.layers.ts
-// Отвечает ТОЛЬКО за добавление слоёв маршрутов на карту.
+// Слои маршрутов (линии, hover, подписи)
+//
+// Ответственность:
+// - добавить ВСЕ слои маршрутов
+// - визуализация агрегаций (count, direction)
 //
 // Инварианты:
-// - НЕ трогает sources (ожидается source "routes")
-// - НЕ хранит состояние
-// - НЕ вешает события
-// - добавляет слои РОВНО ОДИН РАЗ
-//
-// Все визуальные решения маршрутов живут здесь.
+// - source "routes" УЖЕ существует
+// - никакой логики hover внутри
 
 import type { Map } from "maplibre-gl";
 
 /**
- * Добавляет ВСЕ слои маршрутов:
+ * Добавляет все слои маршрутов:
  * - forward / backward
  * - hover
  * - labels
- *
- * Требования:
- * - source "routes" уже должен существовать
  */
 export function addRouteLayers(map: Map) {
-  // ─────────────────────────────
-  // Основные линии — forward
-  // ─────────────────────────────
+  /* Forward */
   map.addLayer({
     id: "routes-line-forward",
     type: "line",
@@ -40,28 +34,12 @@ export function addRouteLayers(map: Map) {
         3, 3,
         6, 4,
       ],
-      "line-opacity": 0.75,
-      "line-color": [
-        "match",
-        ["get", "status"],
-        "in_transit", "#2563eb",
-        "planned",    "#f59e0b",
-        "delivered",  "#16a34a",
-        "#64748b",
-      ],
+      "line-color": "#2563eb",
       "line-offset": 2,
-      "line-dasharray": [
-        "case",
-        ["==", ["get", "status"], "planned"],
-        ["literal", [2, 2]],
-        ["literal", [1, 0]],
-      ],
     },
   });
 
-  // ─────────────────────────────
-  // Основные линии — backward
-  // ─────────────────────────────
+  /* Backward */
   map.addLayer({
     id: "routes-line-backward",
     type: "line",
@@ -77,62 +55,37 @@ export function addRouteLayers(map: Map) {
         3, 3,
         6, 4,
       ],
-      "line-opacity": 0.75,
-      "line-color": [
-        "match",
-        ["get", "status"],
-        "in_transit", "#2563eb",
-        "planned",    "#f59e0b",
-        "delivered",  "#16a34a",
-        "#64748b",
-      ],
+      "line-color": "#2563eb",
       "line-offset": -2,
-      "line-dasharray": [
-        "case",
-        ["==", ["get", "status"], "planned"],
-        ["literal", [2, 2]],
-        ["literal", [1, 0]],
-      ],
     },
   });
 
-  // ─────────────────────────────
-  // Hover — forward
-  // ─────────────────────────────
+  /* Hover layers */
   map.addLayer({
     id: "routes-line-forward-hover",
     type: "line",
     source: "routes",
-    minzoom: 3,
     filter: ["==", ["get", "label"], ""],
     paint: {
       "line-width": 3,
-      "line-opacity": 0.9,
       "line-color": "#1f2937",
       "line-offset": 2,
     },
   });
 
-  // ─────────────────────────────
-  // Hover — backward
-  // ─────────────────────────────
   map.addLayer({
     id: "routes-line-backward-hover",
     type: "line",
     source: "routes",
-    minzoom: 3,
     filter: ["==", ["get", "label"], ""],
     paint: {
       "line-width": 3,
-      "line-opacity": 0.9,
       "line-color": "#1f2937",
       "line-offset": -2,
     },
   });
 
-  // ─────────────────────────────
-  // Подписи маршрутов (×N)
-  // ─────────────────────────────
+  /* Labels */
   map.addLayer({
     id: "routes-labels",
     type: "symbol",
@@ -142,10 +95,6 @@ export function addRouteLayers(map: Map) {
       "symbol-placement": "line",
       "text-field": ["get", "label"],
       "text-size": 11,
-      "text-allow-overlap": false,
-      "text-ignore-placement": false,
-      "text-rotation-alignment": "map",
-      "text-keep-upright": true,
     },
     paint: {
       "text-color": "#475569",

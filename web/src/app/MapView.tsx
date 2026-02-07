@@ -23,6 +23,8 @@ import { attachWarehouseHoverHandlers } from "./map/handlers/warehouses.hover";
 
 import type { MapBounds } from "./map/transform";
 import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
+import { addWarehouseLayers } from "./map/layers/warehouses.layers";
+import { addRouteLayers } from "./map/layers/routes.layers";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -267,107 +269,11 @@ export default function MapView({
         data: buildAggregatedDirectionalRoutes(routesGeoJson),
       });
 
-      /* Warehouses layers */
-      map.addLayer({
-        id: "warehouses-layer",
-        type: "circle",
-        source: "warehouses",
-        paint: {
-          "circle-radius": 6,
-          "circle-color": "#2563eb",
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
+      /* Layers */
+      addWarehouseLayers(map);
+      addRouteLayers(map);
 
-      map.addLayer({
-        id: "warehouses-labels",
-        type: "symbol",
-        source: "warehouses",
-        minzoom: 4,
-        layout: {
-          "text-field": ["concat", ["get", "name"], " ", ["get", "id"]],
-          "text-size": 11,
-          "text-anchor": "top",
-          "text-offset": [0, 1.1],
-        },
-        paint: {
-          "text-color": "#334155",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1,
-        },
-      });
-
-      /* Routes layers */
-      map.addLayer({
-        id: "routes-line-forward",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "direction"], "forward"],
-        paint: {
-          "line-width": 2,
-          "line-color": "#2563eb",
-          "line-offset": 2,
-        },
-      });
-
-      map.addLayer({
-        id: "routes-line-backward",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "direction"], "backward"],
-        paint: {
-          "line-width": 2,
-          "line-color": "#2563eb",
-          "line-offset": -2,
-        },
-      });
-
-      /* Hover layers */
-      map.addLayer({
-        id: "routes-line-forward-hover",
-        type: "line",
-        source: "routes",
-        filter: ["==", ["get", "label"], ""],
-        paint: {
-          "line-width": 3,
-          "line-color": "#1f2937",
-          "line-offset": 2,
-        },
-      });
-
-      map.addLayer({
-        id: "routes-line-backward-hover",
-        type: "line",
-        source: "routes",
-        filter: ["==", ["get", "label"], ""],
-        paint: {
-          "line-width": 3,
-          "line-color": "#1f2937",
-          "line-offset": -2,
-        },
-      });
-
-      map.addLayer({
-        id: "routes-labels",
-        type: "symbol",
-        source: "routes",
-        minzoom: 5,
-        layout: {
-          "symbol-placement": "line",
-          "text-field": ["get", "label"],
-          "text-size": 11,
-        },
-        paint: {
-          "text-color": "#475569",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1,
-        },
-      });
-
-      /* Attach external handlers */
+      /* Handlers */
       routeHoverRef.current = attachRouteHoverHandlers(map);
       warehouseHoverRef.current = attachWarehouseHoverHandlers(map);
 
