@@ -74,8 +74,12 @@ function buildDirectionalRoutes(
     // Для консистентности считаем:
     // - from < to  => forward
     // - from > to  => backward
+    const [start, end] = f.geometry.coordinates;
     const direction: "forward" | "backward" =
-      from < to ? "forward" : "backward";
+      start[0] === f.geometry.coordinates[0][0] &&
+      start[1] === f.geometry.coordinates[0][1]
+        ? "forward"
+        : "backward";
 
     features.push({
       type: "Feature",
@@ -248,7 +252,7 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         id: "routes-line-forward",
         type: "line",
         source: "routes",
-        minzoom: 4,
+        minzoom: 3,
         filter: ["==", ["get", "direction"], "forward"],
         paint: {
           "line-width": 2,
@@ -262,7 +266,7 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         id: "routes-line-backward",
         type: "line",
         source: "routes",
-        minzoom: 4,
+        minzoom: 3,
         filter: ["==", ["get", "direction"], "backward"],
         paint: {
           "line-width": 2,
@@ -278,7 +282,7 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         id: "routes-line-forward-hover",
         type: "line",
         source: "routes",
-        minzoom: 4,
+        minzoom: 3,
         filter: ["==", ["get", "label"], ""],
         paint: {
           "line-width": 3,
@@ -292,7 +296,7 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         id: "routes-line-backward-hover",
         type: "line",
         source: "routes",
-        minzoom: 4,
+        minzoom: 3,
         filter: ["==", ["get", "label"], ""],
         paint: {
           "line-width": 3,
