@@ -1,7 +1,7 @@
 {
+  "_comment": "file: web/public/map/base-style.json",
   "version": 8,
   "name": "base-neutral",
-
   "metadata": {
     "phase": "Project 1.4 / Phase 1 — Base Map Control",
     "purpose": "Provide a fully controlled, neutral base map for the application.",

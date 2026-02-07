@@ -81,6 +81,57 @@ export function addRouteLayers(map: Map): void {
   });
 
   /* ------------------------------------------------------------------ */
+  /* Forward arrows                                                      */
+  /* ------------------------------------------------------------------ */
+
+  map.addLayer({
+    id: MAP_LAYERS.ROUTES_FORWARD_ARROWS,
+    type: "symbol",
+    source: MAP_SOURCES.ROUTES,
+    minzoom: MAP_ZOOM.ROUTES_MIN,
+    filter: ["==", ["get", "direction"], "forward"],
+    layout: {
+      "symbol-placement": "line",
+      "text-field": "▶",
+      "text-size": 12,
+      "symbol-spacing": 80,
+      "text-rotation-alignment": "map",
+      "text-keep-upright": true,
+    },
+    paint: {
+      "text-color": MAP_COLORS.ROUTE_MAIN,
+      "text-halo-color": MAP_COLORS.LABEL_HALO,
+      "text-halo-width": 1,
+    },
+  });
+  
+
+  /* ------------------------------------------------------------------ */
+  /* Backward arrows                                                     */
+  /* ------------------------------------------------------------------ */
+
+  map.addLayer({
+    id: MAP_LAYERS.ROUTES_BACKWARD_ARROWS,
+    type: "symbol",
+    source: MAP_SOURCES.ROUTES,
+    minzoom: MAP_ZOOM.ROUTES_MIN,
+    filter: ["==", ["get", "direction"], "backward"],
+    layout: {
+      "symbol-placement": "line",
+      "text-field": "◀",
+      "text-size": 12,
+      "symbol-spacing": 80,
+      "text-rotation-alignment": "map",
+      "text-keep-upright": true,
+    },
+    paint: {
+      "text-color": MAP_COLORS.ROUTE_MAIN,
+      "text-halo-color": MAP_COLORS.LABEL_HALO,
+      "text-halo-width": 1,
+    },
+  });
+
+  /* ------------------------------------------------------------------ */
   /* Hover layers (initially empty)                                      */
   /* ------------------------------------------------------------------ */
 

@@ -32,6 +32,10 @@ export const MAP_LAYERS = {
   ROUTES_FORWARD: "routes-line-forward",
   ROUTES_BACKWARD: "routes-line-backward",
 
+  /* Routes arrows */
+  ROUTES_FORWARD_ARROWS: "routes-line-forward-arrows",
+  ROUTES_BACKWARD_ARROWS: "routes-line-backward-arrows",
+
   ROUTES_FORWARD_HOVER: "routes-line-forward-hover",
   ROUTES_BACKWARD_HOVER: "routes-line-backward-hover",
 

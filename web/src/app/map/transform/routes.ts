@@ -36,15 +36,16 @@ export type AggregatedRouteProps = {
 /**
  * Определяет направление маршрута.
  *
- * Правило (детерминированное, без догадок):
- * - from < to → forward
- * - from > to → backward
+ * ПРАВИЛО (детерминированное):
+ * - направление берётся ИСКЛЮЧИТЕЛЬНО из данных from → to
  *
- * ВАЖНО:
- * - используется ТОЛЬКО существующие данные
+ * Мы не:
+ * - не сортируем
+ * - не нормализуем
+ * - не гадаем
  */
 function getDirection(from: string, to: string): "forward" | "backward" {
-  return from < to ? "forward" : "backward";
+  return "forward";
 }
 
 /**
@@ -66,12 +67,13 @@ function aggregateStatus(statuses: string[]): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Агрегирует маршруты по направлению (from → to).
+ * Агрегирует маршруты по НАПРАВЛЕНИЮ (from → to).
  *
  * Гарантии:
- * - контракт API не меняется
- * - каждая сторона (forward / backward) — отдельная линия
- * - данные используются ТОЛЬКО для визуализации
+ * - каждый маршрут A → B — отдельная линия
+ * - маршрут B → A — отдельная линия
+ * - геометрия НЕ МЕНЯЕТСЯ
+ * - стрелки всегда смотрят правильно
  */
 export function buildAggregatedDirectionalRoutes(
   routes: GeoJSON.FeatureCollection<
@@ -92,22 +94,14 @@ export function buildAggregatedDirectionalRoutes(
 
   for (const feature of routes.features) {
     const { from, to, status } = feature.properties;
-    const direction = getDirection(from, to);
 
-    const key = `${from}__${to}__${direction}`;
-
-    const geometry: GeoJSON.LineString =
-      direction === "forward"
-        ? feature.geometry
-        : {
-            type: "LineString" as const,
-            coordinates: [...feature.geometry.coordinates].reverse(),
-          };
+    // КЛЮЧ = НАПРАВЛЕНИЕ КАК В API
+    const key = `${from}__${to}`;
 
     if (!byKey.has(key)) {
       byKey.set(key, {
-        geometry,
-        direction,
+        geometry: feature.geometry, // НЕ трогаем координаты
+        direction: "forward",
         statuses: [],
       });
     }
