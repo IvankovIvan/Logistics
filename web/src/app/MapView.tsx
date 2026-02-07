@@ -46,6 +46,7 @@ type MapViewProps = {
 export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onReady }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const warehousePopupRef = useRef<maplibregl.Popup | null>(null);
 
   // Флаг "мы уже добавили sources/layers/listeners" — чтобы не дублировать.
   const hasSourcesRef = useRef(false);
@@ -147,6 +148,28 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         },
       });
 
+      // Phase 2 (подписи складов): отдельный symbol слой для short name + номер.
+      // Инвариант: подписи допускают коллизии (text-allow-overlap: false) и могут скрываться на малом зуме.
+      map.addLayer({
+        id: "warehouses-labels",
+        type: "symbol",
+        source: "warehouses",
+        minzoom: 4,
+        layout: {
+          "text-field": ["concat", ["get", "name"], " ", ["get", "id"]],
+          "text-size": 11,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+          "text-anchor": "top",
+          "text-offset": [0, 1.1],
+        },
+        paint: {
+          "text-color": "#334155",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1,
+        },
+      });
+
       // Слой маршрутов (линии)
       map.addLayer({
         id: "routes-line",
@@ -166,6 +189,35 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
           ],
         },
       });
+
+      // Phase 2 (hover tooltip): показываем только число (id из текущих данных), без изменения стиля точки.
+      const handleWarehouseEnter = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+        const f = e.features?.[0];
+        if (!f) return;
+
+        const props = (f.properties ?? {}) as { id?: string };
+        const id = props.id ? String(props.id) : "";
+        if (!id) return;
+
+        const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
+        if (!warehousePopupRef.current) {
+          warehousePopupRef.current = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+          });
+        }
+
+        warehousePopupRef.current.setLngLat(coords).setText(id).addTo(map);
+        map.getCanvas().style.cursor = "pointer";
+      };
+
+      const handleWarehouseLeave = () => {
+        warehousePopupRef.current?.remove();
+        map.getCanvas().style.cursor = "";
+      };
+
+      map.on("mouseenter", "warehouses-layer", handleWarehouseEnter);
+      map.on("mouseleave", "warehouses-layer", handleWarehouseLeave);
 
       // Автозум только один раз — при первом успешном добавлении данных.
       // Это предотвращает “дёргание камеры” при будущих обновлениях данных.
