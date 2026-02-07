@@ -2,16 +2,16 @@
 // Module: MapLibre map coordinator.
 //
 // Ответственность модуля:
-// - Инициализация MapLibre карты (ОДИН раз)
-// - Контроль жизненного цикла карты и стиля
-// - Добавление sources и layers (ОДИН раз)
-// - Обновление данных ТОЛЬКО через setData
-// - Подключение внешних handlers (hover и т.п.)
+// - Создать MapLibre-карту (РОВНО ОДИН раз)
+// - Отследить готовность карты и стиля
+// - Сообщить наверх, что карта готова (onReady)
+// - Делегировать ВСЮ логику работы с картой в MapFacade
 //
 // Инварианты:
-// - карта создаётся один раз
-// - sources / layers добавляются один раз
-// - MapView не содержит UI-логики
+// - MapView не знает про sources
+// - MapView не знает про layers
+// - MapView не знает про hover / popup
+// - MapView только orchestrator
 
 "use client";
 
@@ -19,16 +19,8 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { MapFacade } from "./map/facade/map.facade";
 import type { MapBounds } from "./map/transform";
-import { buildAggregatedDirectionalRoutes } from "./map/transform/routes";
-
-import { addWarehouseLayers } from "./map/layers/warehouses.layers";
-import { addRouteLayers } from "./map/layers/routes.layers";
-
-import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
-import { attachWarehouseHoverHandlers } from "./map/handlers/warehouses.hover";
-
-import { addMapSources, updateRouteSource,} from "./map/sources/map.sources";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -36,7 +28,11 @@ import { addMapSources, updateRouteSource,} from "./map/sources/map.sources";
 
 /**
  * Props, которые MapView получает от родителя.
- * MapView НЕ загружает данные сам — только отображает.
+ *
+ * ВАЖНО:
+ * - MapView НЕ загружает данные
+ * - MapView НЕ трансформирует данные
+ * - MapView НЕ хранит состояние данных
  */
 type MapViewProps = {
   warehousesGeoJson:
@@ -53,7 +49,10 @@ type MapViewProps = {
       >
     | null;
 
+  /** Границы для initial fitBounds */
   bounds: MapBounds;
+
+  /** Сигнал наверх: карта создана и готова */
   onReady?: () => void;
 };
 
@@ -67,33 +66,32 @@ export default function MapView({
   bounds,
   onReady,
 }: MapViewProps) {
-  /* ---------------- refs ---------------- */
+  /* ------------------------------------------------------------------ */
+  /* Refs                                                              */
+  /* ------------------------------------------------------------------ */
 
-  /** DOM-контейнер карты */
+  /** DOM-узел, в который будет смонтирована карта */
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  /** Экземпляр MapLibre */
+  /** Экземпляр MapLibre.Map (живёт весь lifecycle компонента) */
   const mapRef = useRef<maplibregl.Map | null>(null);
 
-  /** Источники и слои уже добавлены */
-  const hasSourcesRef = useRef(false);
+  /** Facade — единая точка управления картой */
+  const facadeRef = useRef<MapFacade | null>(null);
 
-  /** Актуальный onReady без пересоздания effect */
+  /** Актуальный onReady без перезапуска effect */
   const onReadyRef = useRef(onReady);
 
-  /** Hover API маршрутов */
-  const routeHoverRef = useRef<
-    ReturnType<typeof attachRouteHoverHandlers> | null
-  >(null);
+  /* ------------------------------------------------------------------ */
+  /* State                                                             */
+  /* ------------------------------------------------------------------ */
 
-  /** Hover API складов */
-  const warehouseHoverRef = useRef<
-    ReturnType<typeof attachWarehouseHoverHandlers> | null
-  >(null);
-
-  /* ---------------- state ---------------- */
-
-  /** Стиль карты загружен */
+  /**
+   * Флаг готовности стиля.
+   *
+   * ВАЖНО:
+   * - MapLibre разрешает addSource/addLayer ТОЛЬКО после загрузки стиля
+   */
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
 
   /* ------------------------------------------------------------------ */
@@ -109,6 +107,7 @@ export default function MapView({
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
+    // Карта создаётся строго один раз
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
@@ -119,13 +118,27 @@ export default function MapView({
     });
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
-    mapRef.current = map;
 
+    mapRef.current = map;
+    facadeRef.current = new MapFacade({ map });
+
+    /**
+     * Событие load:
+     * - карта создана
+     * - можно сообщить наверх
+     */
     const handleLoad = () => {
       onReadyRef.current?.();
-      if (map.isStyleLoaded()) setIsStyleLoaded(true);
+      if (map.isStyleLoaded()) {
+        setIsStyleLoaded(true);
+      }
     };
 
+    /**
+     * Событие style.load:
+     * - стиль готов
+     * - можно добавлять sources и layers
+     */
     const handleStyleLoad = () => {
       setIsStyleLoaded(true);
     };
@@ -143,53 +156,39 @@ export default function MapView({
       map.off("style.load", handleStyleLoad);
       map.remove();
       mapRef.current = null;
+      facadeRef.current = null;
     };
   }, []);
 
   /* ------------------------------------------------------------------ */
-  /* Data → map sync                                                    */
+  /* Data → MapFacade synchronization                                   */
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !isStyleLoaded) return;
+    const facade = facadeRef.current;
+
+    if (!facade || !isStyleLoaded) return;
     if (!warehousesGeoJson || !routesGeoJson) return;
 
-    /* ---------- first data arrival ---------- */
-    if (!hasSourcesRef.current) {
-      if (!map.isStyleLoaded()) return;
+    /**
+     * init() — идемпотентен:
+     * - первый вызов инициализирует карту
+     * - последующие ничего не делают
+     */
+    facade.init({
+      warehousesGeoJson,
+      routesGeoJson,
+      bounds,
+    });
 
-      /* Sources */
-      addMapSources(
-        map,
-        warehousesGeoJson,
-        buildAggregatedDirectionalRoutes(routesGeoJson)
-      );
-
-      /* Layers */
-      addWarehouseLayers(map);
-      addRouteLayers(map);
-
-      /* Handlers */
-      routeHoverRef.current = attachRouteHoverHandlers(map);
-      warehouseHoverRef.current = attachWarehouseHoverHandlers(map);
-
-      /* Initial fit */
-      if (bounds) {
-        map.fitBounds(bounds, { padding: 80 });
-      }
-
-      hasSourcesRef.current = true;
-      return;
-    }
-
-    /* ---------- updates ---------- */
-    updateRouteSource(
-      map,
-      buildAggregatedDirectionalRoutes(routesGeoJson)
-    );
-
-    routeHoverRef.current?.restoreHover();
+    /**
+     * update() — безопасен:
+     * - обновляет только данные
+     * - не трогает структуру карты
+     */
+    facade.update({
+      routesGeoJson,
+    });
   }, [isStyleLoaded, warehousesGeoJson, routesGeoJson, bounds]);
 
   /* ------------------------------------------------------------------ */
