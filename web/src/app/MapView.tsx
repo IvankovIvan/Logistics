@@ -6,27 +6,31 @@
 // - Контроль жизненного цикла карты и стиля
 // - Добавление sources и layers (ОДИН раз)
 // - Обновление данных ТОЛЬКО через setData
-// - Подключение внешних handlers (hover, popup и т.п.)
+// - Подключение внешних handlers (hover и т.п.)
 //
 // Инварианты:
 // - карта создаётся один раз
 // - sources / layers добавляются один раз
-// - никакой UI-логики (hover) внутри — только orchestration
+// - MapView не содержит UI-логики
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { FilterSpecification } from "maplibre-gl";
-import { attachWarehouseHoverHandlers } from "./map/handlers/warehouses.hover";
+
+import {
+  MAP_SOURCES,
+} from "./map/constants";
 
 import type { MapBounds } from "./map/transform";
-import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
+import { buildAggregatedDirectionalRoutes } from "./map/transform/routes";
+
 import { addWarehouseLayers } from "./map/layers/warehouses.layers";
 import { addRouteLayers } from "./map/layers/routes.layers";
 
-import { buildAggregatedDirectionalRoutes, } from "./map/transform/routes";
+import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
+import { attachWarehouseHoverHandlers } from "./map/handlers/warehouses.hover";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -56,7 +60,7 @@ type MapViewProps = {
 };
 
 /* ------------------------------------------------------------------ */
-/* MapView component                                                   */
+/* MapView                                                            */
 /* ------------------------------------------------------------------ */
 
 export default function MapView({
@@ -67,31 +71,31 @@ export default function MapView({
 }: MapViewProps) {
   /* ---------------- refs ---------------- */
 
-  /** DOM контейнер карты */
+  /** DOM-контейнер карты */
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   /** Экземпляр MapLibre */
   const mapRef = useRef<maplibregl.Map | null>(null);
 
-  /** Флаг: sources и layers уже добавлены */
+  /** Источники и слои уже добавлены */
   const hasSourcesRef = useRef(false);
 
-  /** Храним актуальный onReady без пересоздания effect */
+  /** Актуальный onReady без пересоздания effect */
   const onReadyRef = useRef(onReady);
 
-  /** Hover API маршрутов (вынесен в отдельный модуль) */
+  /** Hover API маршрутов */
   const routeHoverRef = useRef<
     ReturnType<typeof attachRouteHoverHandlers> | null
   >(null);
 
-  // Hover API складов (вынесен в отдельный модуль)
+  /** Hover API складов */
   const warehouseHoverRef = useRef<
     ReturnType<typeof attachWarehouseHoverHandlers> | null
   >(null);
 
   /* ---------------- state ---------------- */
 
-  /** Стиль карты загружен и можно добавлять sources/layers */
+  /** Стиль карты загружен */
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
 
   /* ------------------------------------------------------------------ */
@@ -145,7 +149,7 @@ export default function MapView({
   }, []);
 
   /* ------------------------------------------------------------------ */
-  /* Data → map synchronization                                        */
+  /* Data → map sync                                                    */
   /* ------------------------------------------------------------------ */
 
   useEffect(() => {
@@ -158,12 +162,12 @@ export default function MapView({
       if (!map.isStyleLoaded()) return;
 
       /* Sources */
-      map.addSource("warehouses", {
+      map.addSource(MAP_SOURCES.WAREHOUSES, {
         type: "geojson",
         data: warehousesGeoJson,
       });
 
-      map.addSource("routes", {
+      map.addSource(MAP_SOURCES.ROUTES, {
         type: "geojson",
         data: buildAggregatedDirectionalRoutes(routesGeoJson),
       });
@@ -176,6 +180,7 @@ export default function MapView({
       routeHoverRef.current = attachRouteHoverHandlers(map);
       warehouseHoverRef.current = attachWarehouseHoverHandlers(map);
 
+      /* Initial fit */
       if (bounds) {
         map.fitBounds(bounds, { padding: 80 });
       }
@@ -185,7 +190,10 @@ export default function MapView({
     }
 
     /* ---------- updates ---------- */
-    const routesSource = map.getSource("routes") as GeoJSONSource | undefined;
+    const routesSource = map.getSource(
+      MAP_SOURCES.ROUTES
+    ) as GeoJSONSource | undefined;
+
     routesSource?.setData(
       buildAggregatedDirectionalRoutes(routesGeoJson)
     );

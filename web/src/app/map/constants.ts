@@ -1,0 +1,73 @@
+// web/src/app/map/constants.ts
+// Единый источник правды для MapLibre-констант.
+//
+// Ответственность модуля:
+// - IDs sources
+// - IDs layers
+// - базовые визуальные параметры
+//
+// ВАЖНО:
+// - никаких import из MapLibre
+// - только значения
+
+/* ------------------------------------------------------------------ */
+/* Sources                                                            */
+/* ------------------------------------------------------------------ */
+
+export const MAP_SOURCES = {
+  WAREHOUSES: "warehouses",
+  ROUTES: "routes",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Layers                                                             */
+/* ------------------------------------------------------------------ */
+
+export const MAP_LAYERS = {
+  /* Warehouses */
+  WAREHOUSES_POINTS: "warehouses-layer",
+  WAREHOUSES_LABELS: "warehouses-labels",
+
+  /* Routes */
+  ROUTES_FORWARD: "routes-line-forward",
+  ROUTES_BACKWARD: "routes-line-backward",
+
+  ROUTES_FORWARD_HOVER: "routes-line-forward-hover",
+  ROUTES_BACKWARD_HOVER: "routes-line-backward-hover",
+
+  ROUTES_LABELS: "routes-labels",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Zoom levels                                                        */
+/* ------------------------------------------------------------------ */
+
+export const MAP_ZOOM = {
+  ROUTES_MIN: 3,
+  ROUTE_LABELS_MIN: 5,
+  WAREHOUSE_LABELS_MIN: 4,
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Visual styles                                                      */
+/* ------------------------------------------------------------------ */
+
+export const MAP_COLORS = {
+  ROUTE_MAIN: "#2563eb",
+  ROUTE_HOVER: "#1f2937",
+
+  WAREHOUSE_POINT: "#2563eb",
+  WAREHOUSE_LABEL: "#334155",
+
+  LABEL_TEXT: "#475569",
+  LABEL_HALO: "#ffffff",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Route offsets                                                      */
+/* ------------------------------------------------------------------ */
+
+export const ROUTE_OFFSETS = {
+  FORWARD: 2,
+  BACKWARD: -2,
+} as const;
