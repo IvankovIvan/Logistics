@@ -16,12 +16,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import maplibregl, { type GeoJSONSource } from "maplibre-gl";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-
-import {
-  MAP_SOURCES,
-} from "./map/constants";
 
 import type { MapBounds } from "./map/transform";
 import { buildAggregatedDirectionalRoutes } from "./map/transform/routes";
@@ -31,6 +27,8 @@ import { addRouteLayers } from "./map/layers/routes.layers";
 
 import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
 import { attachWarehouseHoverHandlers } from "./map/handlers/warehouses.hover";
+
+import { addMapSources, updateRouteSource,} from "./map/sources/map.sources";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -162,15 +160,11 @@ export default function MapView({
       if (!map.isStyleLoaded()) return;
 
       /* Sources */
-      map.addSource(MAP_SOURCES.WAREHOUSES, {
-        type: "geojson",
-        data: warehousesGeoJson,
-      });
-
-      map.addSource(MAP_SOURCES.ROUTES, {
-        type: "geojson",
-        data: buildAggregatedDirectionalRoutes(routesGeoJson),
-      });
+      addMapSources(
+        map,
+        warehousesGeoJson,
+        buildAggregatedDirectionalRoutes(routesGeoJson)
+      );
 
       /* Layers */
       addWarehouseLayers(map);
@@ -190,11 +184,8 @@ export default function MapView({
     }
 
     /* ---------- updates ---------- */
-    const routesSource = map.getSource(
-      MAP_SOURCES.ROUTES
-    ) as GeoJSONSource | undefined;
-
-    routesSource?.setData(
+    updateRouteSource(
+      map,
       buildAggregatedDirectionalRoutes(routesGeoJson)
     );
 
