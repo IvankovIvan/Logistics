@@ -1,3 +1,4 @@
+// File: web/src/app/MapView.tsx
 // Module: MapLibre integration only (map lifecycle, layers, and listeners).
 //
 // Задача модуля:
@@ -65,7 +66,8 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      // Phase 1: используем локальный базовый стиль (контроль стиля в проекте).
+      style: "/map/base-style.json",
       center: [37.6, 55.75],
       zoom: 4,
     });

@@ -1,0 +1,37 @@
+{
+  "version": 8,
+  "name": "base-neutral",
+
+  "metadata": {
+    "phase": "Project 1.4 / Phase 1 — Base Map Control",
+    "purpose": "Provide a fully controlled, neutral base map for the application.",
+    "constraints": [
+      "No labels",
+      "No POI",
+      "No roads as semantic objects",
+      "No vector tile dependencies",
+      "No GeoJSON datasets",
+      "No visual meaning — background only"
+    ],
+    "notes": [
+      "This style intentionally contains ONLY a background layer.",
+      "Administrative borders are intentionally excluded in Phase 1.",
+      "Any vector or border datasets would introduce uncontrolled external schema dependencies.",
+      "Borders may be reintroduced in later phases with a controlled dataset."
+    ]
+  },
+
+  "glyphs": "https://demotiles.maplibre.org/fonts/{fontstack}/{range}.pbf",
+
+  "sources": {},
+
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#f8fafc"
+      }
+    }
+  ]
+}

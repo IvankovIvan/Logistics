@@ -1,3 +1,4 @@
+# docs/dev_guidelines.md
 # Dev guidelines
 
 ## Принципы

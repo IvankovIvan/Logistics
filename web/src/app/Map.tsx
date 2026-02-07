@@ -42,7 +42,8 @@ export default function Map() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      // Phase 1: держим стиль локальным и единым с MapView для консистентности.
+      style: "/map/base-style.json",
       center: [30.36, 59.93],
       zoom: 4,
     });
