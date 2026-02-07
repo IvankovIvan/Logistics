@@ -350,10 +350,30 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         minzoom: 3,
         filter: ["==", ["get", "direction"], "forward"],
         paint: {
-          "line-width": 2,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["get", "count"],
+            1, 2,
+            3, 3,
+            6, 4
+          ],
           "line-opacity": 0.75,
-          "line-color": "#64748b",
+          "line-color": [
+            "match",
+            ["get", "status"],
+            "in_transit", "#2563eb",   // синий
+            "planned",    "#f59e0b",   // оранжевый
+            "delivered",  "#16a34a",   // зелёный
+            "#64748b"                  // fallback
+          ],
           "line-offset": 2, // forward -> одна сторона
+          "line-dasharray": [
+            "case",
+            ["==", ["get", "status"], "planned"],
+            ["literal", [2, 2]],
+            ["literal", [1, 0]]
+          ],
         },
       });
 
@@ -364,10 +384,30 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         minzoom: 3,
         filter: ["==", ["get", "direction"], "backward"],
         paint: {
-          "line-width": 2,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["get", "count"],
+            1, 2,
+            3, 3,
+            6, 4
+          ],
           "line-opacity": 0.75,
-          "line-color": "#64748b",
+          "line-color": [
+            "match",
+            ["get", "status"],
+            "in_transit", "#2563eb",   // синий
+            "planned",    "#f59e0b",   // оранжевый
+            "delivered",  "#16a34a",   // зелёный
+            "#64748b"                  // fallback
+          ],
           "line-offset": -2, // backward -> другая сторона
+          "line-dasharray": [
+            "case",
+            ["==", ["get", "status"], "planned"],
+            ["literal", [2, 2]],
+            ["literal", [1, 0]]
+          ],
         },
       });
 
