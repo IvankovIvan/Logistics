@@ -21,6 +21,7 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FilterSpecification } from "maplibre-gl";
 import { buildAggregatedDirectionalRoutes } from "./map/routes/routes.aggregate";
+import { addRouteLayers } from "./map/layers/routes.layers";
 
 import type { MapBounds } from "./map/transform";
 
@@ -201,6 +202,9 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
         data: buildAggregatedDirectionalRoutes(routesGeoJson),
       });
 
+      // Слой маршрутов (линии) + hover слой + подписи
+      addRouteLayers(map);
+
       // Слой складов (точки)
       map.addLayer({
         id: "warehouses-layer",
@@ -243,107 +247,6 @@ export default function MapView({ warehousesGeoJson, routesGeoJson, bounds, onRe
           "text-color": "#334155",
           "text-halo-color": "#ffffff",
           "text-halo-width": 1,
-        },
-      });
-
-      // Phase 3 (маршруты):
-      // Разведение направлений ТОЛЬКО по существующим данным.
-      // Если направления нет — линия не рисуется (сторона пустая).
-      map.addLayer({
-        id: "routes-line-forward",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "direction"], "forward"],
-        paint: {
-          "line-width": [
-            "interpolate",
-            ["linear"],
-            ["get", "count"],
-            1, 2,
-            3, 3,
-            6, 4
-          ],
-          "line-opacity": 0.75,
-          "line-color": [
-            "match",
-            ["get", "status"],
-            "in_transit", "#2563eb",   // синий
-            "planned",    "#f59e0b",   // оранжевый
-            "delivered",  "#16a34a",   // зелёный
-            "#64748b"                  // fallback
-          ],
-          "line-offset": 2, // forward -> одна сторона
-          "line-dasharray": [
-            "case",
-            ["==", ["get", "status"], "planned"],
-            ["literal", [2, 2]],
-            ["literal", [1, 0]]
-          ],
-        },
-      });
-
-      map.addLayer({
-        id: "routes-line-backward",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "direction"], "backward"],
-        paint: {
-          "line-width": [
-            "interpolate",
-            ["linear"],
-            ["get", "count"],
-            1, 2,
-            3, 3,
-            6, 4
-          ],
-          "line-opacity": 0.75,
-          "line-color": [
-            "match",
-            ["get", "status"],
-            "in_transit", "#2563eb",   // синий
-            "planned",    "#f59e0b",   // оранжевый
-            "delivered",  "#16a34a",   // зелёный
-            "#64748b"                  // fallback
-          ],
-          "line-offset": -2, // backward -> другая сторона
-          "line-dasharray": [
-            "case",
-            ["==", ["get", "status"], "planned"],
-            ["literal", [2, 2]],
-            ["literal", [1, 0]]
-          ],
-        },
-      });
-
-      // Phase 4 (hover): используем отдельные hover-слои, а не feature-state,
-      // потому что feature-state требует id на фичах (это бы меняло GeoJSON).
-      map.addLayer({
-        id: "routes-line-forward-hover",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "label"], ""],
-        paint: {
-          "line-width": 3,
-          "line-opacity": 0.9,
-          "line-color": "#1f2937",
-          "line-offset": 2,
-        },
-      });
-
-      map.addLayer({
-        id: "routes-line-backward-hover",
-        type: "line",
-        source: "routes",
-        minzoom: 3,
-        filter: ["==", ["get", "label"], ""],
-        paint: {
-          "line-width": 3,
-          "line-opacity": 0.9,
-          "line-color": "#1f2937",
-          "line-offset": -2,
         },
       });
 
