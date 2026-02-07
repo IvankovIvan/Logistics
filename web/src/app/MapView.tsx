@@ -26,6 +26,8 @@ import { attachRouteHoverHandlers } from "./map/handlers/routes.hover";
 import { addWarehouseLayers } from "./map/layers/warehouses.layers";
 import { addRouteLayers } from "./map/layers/routes.layers";
 
+import { buildAggregatedDirectionalRoutes, } from "./map/transform/routes";
+
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -52,109 +54,6 @@ type MapViewProps = {
   bounds: MapBounds;
   onReady?: () => void;
 };
-
-/* ------------------------------------------------------------------ */
-/* Routes aggregation                                                  */
-/* ------------------------------------------------------------------ */
-
-/**
- * Агрегирует маршруты по направлению (from -> to).
- *
- * Гарантии:
- * - контракт API не меняется
- * - направление сохраняется
- * - каждая сторона (forward/backward) — отдельная линия
- *
- * Используется ТОЛЬКО для визуализации.
- */
-function buildAggregatedDirectionalRoutes(
-  routes: GeoJSON.FeatureCollection<
-    GeoJSON.LineString,
-    { id: string; status: string; from: string; to: string }
-  >
-): GeoJSON.FeatureCollection<
-  GeoJSON.LineString,
-  {
-    direction: "forward" | "backward";
-    count: number;
-    status: string;
-    label: string;
-    statuses: string[];
-  }
-> {
-  type Acc = {
-    geometry: GeoJSON.LineString;
-    direction: "forward" | "backward";
-    statuses: string[];
-  };
-
-  const byKey = new Map<string, Acc>();
-
-  for (const f of routes.features) {
-    const { from, to, status } = f.properties;
-
-    const direction: "forward" | "backward" =
-      from < to ? "forward" : "backward";
-
-    const key = `${from}__${to}__${direction}`;
-
-    const geometry: GeoJSON.LineString =
-      direction === "forward"
-        ? f.geometry
-        : {
-            type: "LineString",
-            coordinates: [...f.geometry.coordinates].reverse(),
-          };
-
-    if (!byKey.has(key)) {
-      byKey.set(key, {
-        geometry,
-        direction,
-        statuses: [],
-      });
-    }
-
-    byKey.get(key)!.statuses.push(status);
-  }
-
-  const features: GeoJSON.Feature<
-    GeoJSON.LineString,
-    {
-      direction: "forward" | "backward";
-      count: number;
-      status: string;
-      label: string;
-      statuses: string[];
-    }
-  >[] = [];
-
-  for (const acc of byKey.values()) {
-    const count = acc.statuses.length;
-
-    const status = acc.statuses.includes("in_transit")
-      ? "in_transit"
-      : acc.statuses.includes("planned")
-      ? "planned"
-      : acc.statuses[0];
-
-    features.push({
-      type: "Feature",
-      geometry: acc.geometry,
-      properties: {
-        direction: acc.direction,
-        count,
-        status,
-        statuses: acc.statuses,
-        label: count > 1 ? `×${count}` : "1",
-      },
-    });
-  }
-
-  return {
-    type: "FeatureCollection",
-    features,
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /* MapView component                                                   */
