@@ -5,11 +5,7 @@
 // Ответственность:
 // - API → визуальные route features
 // - 1 маршрут = 1 линия
-// - hover по id
-//
-// ВАЖНО:
-// - геометрия считается здесь
-// - MapLibre не используется
+// - direction нужен ТОЛЬКО для UI
 
 import type {
   Feature,
@@ -20,7 +16,6 @@ import type {
 
 import {
   buildShiftedRouteGeometry,
-  getDirectionFromGeometry,
   type RouteDirection,
 } from "../geometry/routes.geometry";
 
@@ -44,24 +39,25 @@ export function buildRouteFeatures(
   return {
     type: "FeatureCollection",
     features: routes.features.map((f) => {
-      const { id, status } = f.properties;
+      const { id, status, from, to } = f.properties;
+
       const [start, end] = f.geometry.coordinates as [
         Position,
         Position
       ];
 
-      const direction = getDirectionFromGeometry(start, end);
+      // direction ДЕТЕРМИНИРОВАННЫЙ, по API
+      const direction: RouteDirection =
+        from < to ? "forward" : "backward";
 
       const geometry = buildShiftedRouteGeometry(
         start,
         end,
         direction
       );
-console.log("ROUTE", id, {
-        direction,
-        start,
-        end,
-      });
+
+      console.log("ROUTE", id, { direction, start, end });
+
       return {
         type: "Feature",
         geometry,

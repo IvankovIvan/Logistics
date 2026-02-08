@@ -1,16 +1,4 @@
-// web/src/app/map/layers/routes.layers.ts
-//
-// Слои маршрутов.
-//
-// Ответственность:
-// - отрисовка линий
-// - отрисовка стрелок
-// - подготовка hover-слоёв
-//
-// ВАЖНО:
-// - source "routes" уже существует
-// - direction приходит из transform
-// - НИКАКОЙ логики hover здесь нет
+// routes.layers.ts
 
 import type { Map } from "maplibre-gl";
 import {
@@ -21,16 +9,14 @@ import {
 } from "../constants";
 
 export function addRouteLayers(map: Map): void {
-  /* ------------------------------------------------------------------ */
-  /* Lines                                                              */
-  /* ------------------------------------------------------------------ */
+  /* Lines */
 
   map.addLayer({
     id: MAP_LAYERS.ROUTES_FORWARD,
     type: "line",
     source: MAP_SOURCES.ROUTES,
-    minzoom: MAP_ZOOM.ROUTES_MIN,
     filter: ["==", ["get", "direction"], "forward"],
+    minzoom: MAP_ZOOM.ROUTES_MIN,
     paint: {
       "line-width": 2,
       "line-color": MAP_COLORS.ROUTE_MAIN,
@@ -42,8 +28,8 @@ export function addRouteLayers(map: Map): void {
     id: MAP_LAYERS.ROUTES_BACKWARD,
     type: "line",
     source: MAP_SOURCES.ROUTES,
-    minzoom: MAP_ZOOM.ROUTES_MIN,
     filter: ["==", ["get", "direction"], "backward"],
+    minzoom: MAP_ZOOM.ROUTES_MIN,
     paint: {
       "line-width": 2,
       "line-color": MAP_COLORS.ROUTE_MAIN,
@@ -51,16 +37,14 @@ export function addRouteLayers(map: Map): void {
     },
   });
 
-  /* ------------------------------------------------------------------ */
-  /* Arrows                                                             */
-  /* ------------------------------------------------------------------ */
+  /* Arrows */
 
   map.addLayer({
     id: MAP_LAYERS.ROUTES_FORWARD_ARROWS,
     type: "symbol",
     source: MAP_SOURCES.ROUTES,
-    minzoom: MAP_ZOOM.ROUTES_MIN,
     filter: ["==", ["get", "direction"], "forward"],
+    minzoom: MAP_ZOOM.ROUTES_MIN,
     layout: {
       "symbol-placement": "line",
       "text-field": "▶",
@@ -71,8 +55,6 @@ export function addRouteLayers(map: Map): void {
     },
     paint: {
       "text-color": MAP_COLORS.ROUTE_MAIN,
-      "text-halo-color": MAP_COLORS.LABEL_HALO,
-      "text-halo-width": 1,
     },
   });
 
@@ -80,8 +62,8 @@ export function addRouteLayers(map: Map): void {
     id: MAP_LAYERS.ROUTES_BACKWARD_ARROWS,
     type: "symbol",
     source: MAP_SOURCES.ROUTES,
-    minzoom: MAP_ZOOM.ROUTES_MIN,
     filter: ["==", ["get", "direction"], "backward"],
+    minzoom: MAP_ZOOM.ROUTES_MIN,
     layout: {
       "symbol-placement": "line",
       "text-field": "◀",
@@ -92,13 +74,11 @@ export function addRouteLayers(map: Map): void {
     },
     paint: {
       "text-color": MAP_COLORS.ROUTE_MAIN,
-      "text-halo-color": MAP_COLORS.LABEL_HALO,
-      "text-halo-width": 1,
     },
   });
 
   /* ------------------------------------------------------------------ */
-  /* Hover                                                              */
+  /* Hover                                                             */
   /* ------------------------------------------------------------------ */
 
   map.addLayer({
@@ -109,18 +89,7 @@ export function addRouteLayers(map: Map): void {
     paint: {
       "line-width": 3,
       "line-color": MAP_COLORS.ROUTE_HOVER,
-      "line-opacity": 0.9,
-    },
-  });
-
-  map.addLayer({
-    id: MAP_LAYERS.ROUTES_BACKWARD_HOVER,
-    type: "line",
-    source: MAP_SOURCES.ROUTES,
-    filter: ["==", ["get", "id"], ""],
-    paint: {
-      "line-width": 3,
-      "line-color": MAP_COLORS.ROUTE_HOVER,
+      "line-offset": 2,
       "line-opacity": 0.9,
     },
   });
