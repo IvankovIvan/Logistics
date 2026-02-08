@@ -21,6 +21,11 @@ import { attachWarehouseHoverHandlers } from "../handlers/warehouses.hover";
 import { buildRouteFeatures } from "../transform/routes";
 import type { MapBounds } from "../transform";
 
+import { MAP_LAYERS } from "../constants";
+import type { RouteStatus } from "../constants";
+import type { FilterSpecification } from "maplibre-gl";
+
+
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -145,4 +150,39 @@ export class MapFacade {
 
     this.routeHover?.restoreHover();
   }
+
+  /* ------------------------------------------------------------------ */
+  /* Route filters                                                      */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Фильтрует маршруты по статусам.
+   *
+   * @param statuses - список разрешённых статусов
+   *
+   * ВАЖНО:
+   * - работает ТОЛЬКО через setFilter
+   * - не меняет данные
+   * - применяется ко ВСЕМ route-layer
+   */
+  setRouteStatusFilter(statuses: RouteStatus[]): void {
+    if (!this.initialized) return;
+
+    const filter: FilterSpecification =
+      statuses.length === 0
+        ? ["==", ["get", "status"], "__none__"] // скрыть всё
+        : ["in", ["get", "status"], ["literal", statuses]];
+
+    const routeLayers = [
+      MAP_LAYERS.ROUTES_FORWARD,
+      MAP_LAYERS.ROUTES_BACKWARD,
+      MAP_LAYERS.ROUTES_FORWARD_ARROWS,
+      MAP_LAYERS.ROUTES_BACKWARD_ARROWS,
+    ];
+
+    for (const layerId of routeLayers) {
+      this.map.setFilter(layerId, filter);
+    }
+  }
+
 }

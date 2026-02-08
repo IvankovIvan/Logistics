@@ -84,7 +84,7 @@ export const TEXT_OFFSET_ARROWS = 0.18 as const;
 export const TEXT_SIZE_ARROWS = 8 as const;
 
 /* ------------------------------------------------------------------ */
-/* Route status colors                                                */
+/* Route status colors (SOURCE OF TRUTH)                               */
 /* ------------------------------------------------------------------ */
 
 export const ROUTE_STATUS_COLORS = {
@@ -94,3 +94,16 @@ export const ROUTE_STATUS_COLORS = {
   delivered: "#16a34a",  // зелёный
   default: "#2563eb",
 } as const;
+
+/* ------------------------------------------------------------------ */
+/* Route statuses (single source of truth)                            */
+/* ------------------------------------------------------------------ */
+
+export const ROUTE_STATUSES = {
+  in_transit: "В пути",
+  planned: "Запланирован",
+  cancelled: "Отменён",
+  delivered: "Доставлен",
+} as const;
+
+export type RouteStatus = keyof typeof ROUTE_STATUSES;

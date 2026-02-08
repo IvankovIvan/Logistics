@@ -15,12 +15,15 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MapFacade } from "./map/facade/map.facade";
 import type { MapBounds } from "./map/transform";
+import type { RouteStatus } from "./map/constants";
+
+import { RouteLegend } from "./components/RouteLegend";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -192,6 +195,34 @@ export default function MapView({
   }, [isStyleLoaded, warehousesGeoJson, routesGeoJson, bounds]);
 
   /* ------------------------------------------------------------------ */
+  /* Route filter bridge (Legend → Facade)                               */
+  /* ------------------------------------------------------------------ */
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  /**
+   * Callback из UI (RouteLegend).
+   *
+   * ВАЖНО:
+   * - MapView не знает, КАК фильтруются маршруты
+   * - просто прокидывает состояние в Facade
+   */
+  const handleRouteFilterChange = useCallback(
+    (statuses: RouteStatus[]) => {
+      facadeRef.current?.setRouteStatusFilter(statuses);
+    },
+    []
+  );
+
+  /* ------------------------------------------------------------------ */
+
+  return (
+    <>
+      <div
+        ref={containerRef}
+        style={{ width: "100%", height: "100%" }}
+      />
+
+      {/* UI-слой поверх карты */}
+      <RouteLegend onChange={handleRouteFilterChange} />
+    </>
+  );
 }
