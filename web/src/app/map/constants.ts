@@ -82,3 +82,15 @@ export const TEXT_OFFSET_ARROWS = 0.18 as const;
 /* text-size offsets ARROWS                                         */
 /* ------------------------------------------------------------------ */
 export const TEXT_SIZE_ARROWS = 8 as const;
+
+/* ------------------------------------------------------------------ */
+/* Route status colors                                                */
+/* ------------------------------------------------------------------ */
+
+export const ROUTE_STATUS_COLORS = {
+  in_transit: "#2563eb", // синий
+  planned: "#f59e0b",    // оранжевый
+  cancelled: "#6b7280",  // серый
+  delivered: "#16a34a",  // зелёный
+  default: "#2563eb",
+} as const;
