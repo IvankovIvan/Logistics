@@ -77,7 +77,7 @@ export function addRouteLayers(map: Map): void {
     minzoom: MAP_ZOOM.ROUTES_MIN,
     layout: {
       "symbol-placement": "line",
-      "text-field": "▶",
+      "text-field": "▶ ▶ ▶",
       "symbol-spacing": 80,
       "text-size": TEXT_SIZE_ARROWS,
       "text-rotation-alignment": "map",
@@ -98,7 +98,7 @@ export function addRouteLayers(map: Map): void {
     minzoom: MAP_ZOOM.ROUTES_MIN,
     layout: {
       "symbol-placement": "line",
-      "text-field": "◀",
+      "text-field": "◀ ◀ ◀",
       "symbol-spacing": 80,
       "text-size": TEXT_SIZE_ARROWS,
       "text-rotation-alignment": "map",
@@ -125,6 +125,19 @@ export function addRouteLayers(map: Map): void {
       "line-width": 3,
       "line-color": MAP_COLORS.ROUTE_HOVER,
       "line-offset": 2,
+      "line-opacity": 0.9,
+    },
+  });
+
+  map.addLayer({
+    id: MAP_LAYERS.ROUTES_BACKWARD_HOVER,
+    type: "line",
+    source: MAP_SOURCES.ROUTES,
+    filter: ["==", ["get", "id"], ""], // пусто по умолчанию
+    paint: {
+      "line-width": 3,
+      "line-color": MAP_COLORS.ROUTE_HOVER,
+      "line-offset": ROUTE_OFFSETS,
       "line-opacity": 0.9,
     },
   });

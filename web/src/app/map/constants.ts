@@ -57,7 +57,7 @@ export const MAP_ZOOM = {
 /* ------------------------------------------------------------------ */
 
 export const MAP_COLORS = {
-  ROUTE_MAIN: "#2563eb",
+  ROUTE_MAIN: "#838383",
   ROUTE_HOVER: "#1f2937",
 
   WAREHOUSE_POINT: "#2563eb",
