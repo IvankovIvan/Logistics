@@ -6,10 +6,13 @@ import {
   MAP_SOURCES,
   MAP_ZOOM,
   MAP_COLORS,
+  ROUTE_OFFSETS,
 } from "../constants";
 
 export function addRouteLayers(map: Map): void {
-  /* Lines */
+  /* ------------------------------------------------------------------ */
+  /* Lines                                                              */
+  /* ------------------------------------------------------------------ */
 
   map.addLayer({
     id: MAP_LAYERS.ROUTES_FORWARD,
@@ -20,6 +23,7 @@ export function addRouteLayers(map: Map): void {
     paint: {
       "line-width": 2,
       "line-color": MAP_COLORS.ROUTE_MAIN,
+      "line-offset": ROUTE_OFFSETS,
       "line-opacity": 0.75,
     },
   });
@@ -33,11 +37,14 @@ export function addRouteLayers(map: Map): void {
     paint: {
       "line-width": 2,
       "line-color": MAP_COLORS.ROUTE_MAIN,
+      "line-offset": ROUTE_OFFSETS,
       "line-opacity": 0.75,
     },
   });
 
-  /* Arrows */
+  /* ------------------------------------------------------------------ */
+  /* Arrows — ТО ЖЕ СМЕЩЕНИЕ                                             */
+  /* ------------------------------------------------------------------ */
 
   map.addLayer({
     id: MAP_LAYERS.ROUTES_FORWARD_ARROWS,
@@ -76,6 +83,7 @@ export function addRouteLayers(map: Map): void {
       "text-color": MAP_COLORS.ROUTE_MAIN,
     },
   });
+
 
   /* ------------------------------------------------------------------ */
   /* Hover                                                             */

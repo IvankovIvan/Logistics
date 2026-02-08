@@ -71,7 +71,4 @@ export const MAP_COLORS = {
 /* Route offsets                                                      */
 /* ------------------------------------------------------------------ */
 
-export const ROUTE_OFFSETS = {
-  FORWARD: 2,
-  BACKWARD: -2,
-} as const;
+export const ROUTE_OFFSETS = 2 as const; // pixels

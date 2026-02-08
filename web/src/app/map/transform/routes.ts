@@ -1,11 +1,11 @@
-// routes.ts
+// web/src/app/map/transform/routes.ts
 //
-// Transform-функции для маршрутов.
+// Transform-функции маршрутов
 //
 // Ответственность:
-// - API → визуальные route features
+// - API → визуальные features
 // - 1 маршрут = 1 линия
-// - direction нужен ТОЛЬКО для UI
+// - direction ТОЛЬКО для UI
 
 import type {
   Feature,
@@ -15,7 +15,7 @@ import type {
 } from "geojson";
 
 import {
-  buildShiftedRouteGeometry,
+  getDirectionFromVector,
   type RouteDirection,
 } from "../geometry/routes.geometry";
 
@@ -39,28 +39,18 @@ export function buildRouteFeatures(
   return {
     type: "FeatureCollection",
     features: routes.features.map((f) => {
-      const { id, status, from, to } = f.properties;
+      const { id, status } = f.properties;
 
       const [start, end] = f.geometry.coordinates as [
         Position,
         Position
       ];
 
-      // direction ДЕТЕРМИНИРОВАННЫЙ, по API
-      const direction: RouteDirection =
-        from < to ? "forward" : "backward";
-
-      const geometry = buildShiftedRouteGeometry(
-        start,
-        end,
-        direction
-      );
-
-      console.log("ROUTE", id, { direction, start, end });
-
+      const direction = getDirectionFromVector(start, end);
+console.log("ROUTE", id, { direction, start, end });
       return {
         type: "Feature",
-        geometry,
+        geometry: f.geometry, // ⬅️ БЕЗ ИЗМЕНЕНИЙ
         properties: {
           id,
           status,
