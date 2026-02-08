@@ -7,6 +7,10 @@
 // - Сообщить наверх, что карта готова (onReady)
 // - Делегировать ВСЮ логику работы с картой в MapFacade
 //
+// Почему это здесь:
+// - MapView — точка монтирования карты и только orchestrator
+// - Любая бизнес-логика уходит в Facade или UI-компоненты
+//
 // Инварианты:
 // - MapView не знает про sources
 // - MapView не знает про layers
@@ -23,7 +27,7 @@ import { MapFacade } from "./map/facade/map.facade";
 import type { MapBounds } from "./map/transform";
 import type { RouteStatus } from "./map/constants";
 
-import { RouteLegend } from "./components/RouteLegend";
+import { RouteStatusFilter } from "./map/ui/RouteStatusFilter";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -195,11 +199,11 @@ export default function MapView({
   }, [isStyleLoaded, warehousesGeoJson, routesGeoJson, bounds]);
 
   /* ------------------------------------------------------------------ */
-  /* Route filter bridge (Legend → Facade)                               */
+  /* Route filter bridge (UI → Facade)                                   */
   /* ------------------------------------------------------------------ */
 
   /**
-   * Callback из UI (RouteLegend).
+   * Callback из UI (RouteStatusFilter).
    *
    * ВАЖНО:
    * - MapView не знает, КАК фильтруются маршруты
@@ -221,8 +225,8 @@ export default function MapView({
         style={{ width: "100%", height: "100%" }}
       />
 
-      {/* UI-слой поверх карты */}
-      <RouteLegend onChange={handleRouteFilterChange} />
+      {/* UI-слой поверх карты: фильтры живут отдельно от MapView */}
+      <RouteStatusFilter onChange={handleRouteFilterChange} />
     </>
   );
 }

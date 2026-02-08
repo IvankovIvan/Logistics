@@ -1,4 +1,5 @@
 // web/src/app/map/facade/map.facade.ts
+//
 // Facade над MapLibre.
 //
 // Ответственность:
@@ -6,10 +7,12 @@
 // - предоставить простой API для MapView
 //
 // Инварианты:
-// - init() вызывается один раз
-// - setData() может вызываться сколько угодно раз
+// - init() вызывается строго один раз
+// - update() может вызываться сколько угодно раз
+// - Facade НЕ знает про UI и localStorage
+// - Facade НЕ меняет GeoJSON, только управляет MapLibre
 
-import type { Map } from "maplibre-gl";
+import type { Map, FilterSpecification } from "maplibre-gl";
 
 import { addMapSources, updateRouteSource } from "../sources/map.sources";
 import { addWarehouseLayers } from "../layers/warehouses.layers";
@@ -21,46 +24,43 @@ import { attachWarehouseHoverHandlers } from "../handlers/warehouses.hover";
 import { buildRouteFeatures } from "../transform/routes";
 import type { MapBounds } from "../transform";
 
-import { MAP_LAYERS } from "../constants";
-import type { RouteStatus } from "../constants";
-import type { FilterSpecification } from "maplibre-gl";
-
+import { MAP_LAYERS, type RouteStatus } from "../constants";
 
 /* ------------------------------------------------------------------ */
-/* Types                                                              */
+/* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-type FacadeDeps = {
-  map: Map;
-};
+function buildRouteLayerFilter(
+  direction: "forward" | "backward",
+  statuses: RouteStatus[]
+): FilterSpecification {
+  if (statuses.length === 0) {
+    return ["==", ["get", "status"], "__none__"];
+  }
 
-/**
- * Данные, которые MapFacade принимает извне.
- * Facade НЕ загружает данные сам.
- */
-type WarehousesGeoJson = GeoJSON.FeatureCollection<
-  GeoJSON.Point,
-  { id: string; name: string; status: string }
->;
-
-type RoutesGeoJson = GeoJSON.FeatureCollection<
-  GeoJSON.LineString,
-  { id: string; status: string; from: string; to: string }
->;
-
-type FacadeData = {
-  warehousesGeoJson: WarehousesGeoJson;
-  routesGeoJson: RoutesGeoJson;
-  bounds?: MapBounds;
-};
+  return [
+    "all",
+    ["==", ["get", "direction"], direction],
+    ["in", ["get", "status"], ["literal", statuses]],
+  ];
+}
 
 /* ------------------------------------------------------------------ */
-/* MapFacade                                                           */
+/* MapFacade                                                          */
 /* ------------------------------------------------------------------ */
 
 export class MapFacade {
   private map: Map;
   private initialized = false;
+
+  /**
+   * Последний выбранный фильтр.
+   *
+   * ВАЖНО:
+   * - может быть установлен ДО init()
+   * - применяется сразу после init()
+   */
+  private activeRouteStatuses: RouteStatus[] | null = null;
 
   private routeHover: ReturnType<typeof attachRouteHoverHandlers> | null =
     null;
@@ -68,79 +68,67 @@ export class MapFacade {
     | ReturnType<typeof attachWarehouseHoverHandlers>
     | null = null;
 
-  constructor({ map }: FacadeDeps) {
+  constructor({ map }: { map: Map }) {
     this.map = map;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* State                                                              */
-  /* ------------------------------------------------------------------ */
-
-  /**
-   * Возвращает true, если карта уже инициализирована.
-   *
-   * Используется MapView, чтобы:
-   * - вызвать init() строго один раз
-   * - далее вызывать только update()
-   */
   isInitialized(): boolean {
     return this.initialized;
   }
 
   /* ------------------------------------------------------------------ */
-  /* Init (ONCE)                                                        */
+  /* Init (ONCE)                                                       */
   /* ------------------------------------------------------------------ */
 
-  /**
-   * Инициализация карты:
-   * - добавляет sources
-   * - добавляет layers
-   * - подключает handlers
-   *
-   * ВАЖНО:
-   * - вызывается строго один раз
-   */
-  init(data: FacadeData): void {
+  init(data: {
+    warehousesGeoJson: GeoJSON.FeatureCollection<
+      GeoJSON.Point,
+      { id: string; name: string; status: string }
+    >;
+    routesGeoJson: GeoJSON.FeatureCollection<
+      GeoJSON.LineString,
+      { id: string; status: string; from: string; to: string }
+    >;
+    bounds?: MapBounds;
+  }): void {
     if (this.initialized) return;
 
     const { warehousesGeoJson, routesGeoJson, bounds } = data;
 
-    /* Sources */
     addMapSources(
       this.map,
       warehousesGeoJson,
       buildRouteFeatures(routesGeoJson)
     );
 
-    /* Layers */
     addWarehouseLayers(this.map);
     addRouteLayers(this.map);
 
-    /* Handlers */
     this.routeHover = attachRouteHoverHandlers(this.map);
     this.warehouseHover = attachWarehouseHoverHandlers(this.map);
 
-    /* Initial camera */
     if (bounds) {
       this.map.fitBounds(bounds, { padding: 80 });
     }
 
     this.initialized = true;
+
+    // ✅ КРИТИЧНО: применяем фильтр, если он был установлен раньше
+    if (this.activeRouteStatuses) {
+      this.applyRouteStatusFilter(this.activeRouteStatuses);
+    }
   }
 
   /* ------------------------------------------------------------------ */
-  /* Update                                                             */
+  /* Update                                                            */
   /* ------------------------------------------------------------------ */
 
-  /**
-   * Обновляет данные маршрутов.
-   *
-   * Используется при:
-   * - poll
-   * - ingest
-   * - ручном refresh
-   */
-  update(data: Pick<FacadeData, "routesGeoJson">): void {
+  update(data: {
+    routesGeoJson: GeoJSON.FeatureCollection<
+      GeoJSON.LineString,
+      { id: string; status: string; from: string; to: string }
+    >;
+  }): void {
     if (!this.initialized) return;
 
     updateRouteSource(
@@ -148,41 +136,39 @@ export class MapFacade {
       buildRouteFeatures(data.routesGeoJson)
     );
 
+    if (this.activeRouteStatuses) {
+      this.applyRouteStatusFilter(this.activeRouteStatuses);
+    }
+
     this.routeHover?.restoreHover();
   }
 
   /* ------------------------------------------------------------------ */
-  /* Route filters                                                      */
+  /* Route filter API                                                  */
   /* ------------------------------------------------------------------ */
 
-  /**
-   * Фильтрует маршруты по статусам.
-   *
-   * @param statuses - список разрешённых статусов
-   *
-   * ВАЖНО:
-   * - работает ТОЛЬКО через setFilter
-   * - не меняет данные
-   * - применяется ко ВСЕМ route-layer
-   */
   setRouteStatusFilter(statuses: RouteStatus[]): void {
+    // ✅ ВСЕГДА сохраняем
+    this.activeRouteStatuses = statuses;
+
     if (!this.initialized) return;
 
-    const filter: FilterSpecification =
-      statuses.length === 0
-        ? ["==", ["get", "status"], "__none__"] // скрыть всё
-        : ["in", ["get", "status"], ["literal", statuses]];
-
-    const routeLayers = [
-      MAP_LAYERS.ROUTES_FORWARD,
-      MAP_LAYERS.ROUTES_BACKWARD,
-      MAP_LAYERS.ROUTES_FORWARD_ARROWS,
-      MAP_LAYERS.ROUTES_BACKWARD_ARROWS,
-    ];
-
-    for (const layerId of routeLayers) {
-      this.map.setFilter(layerId, filter);
-    }
+    this.applyRouteStatusFilter(statuses);
   }
 
+  private applyRouteStatusFilter(statuses: RouteStatus[]): void {
+    const layers = [
+      { id: MAP_LAYERS.ROUTES_FORWARD, direction: "forward" as const },
+      { id: MAP_LAYERS.ROUTES_BACKWARD, direction: "backward" as const },
+      { id: MAP_LAYERS.ROUTES_FORWARD_ARROWS, direction: "forward" as const },
+      { id: MAP_LAYERS.ROUTES_BACKWARD_ARROWS, direction: "backward" as const },
+    ];
+
+    for (const { id, direction } of layers) {
+      this.map.setFilter(
+        id,
+        buildRouteLayerFilter(direction, statuses)
+      );
+    }
+  }
 }
