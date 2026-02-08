@@ -7,6 +7,8 @@ import {
   MAP_ZOOM,
   MAP_COLORS,
   ROUTE_OFFSETS,
+  TEXT_OFFSET_ARROWS,
+  TEXT_SIZE_ARROWS,
 } from "../constants";
 
 export function addRouteLayers(map: Map): void {
@@ -56,9 +58,11 @@ export function addRouteLayers(map: Map): void {
       "symbol-placement": "line",
       "text-field": "▶",
       "symbol-spacing": 80,
-      "text-size": 12,
+      "text-size": TEXT_SIZE_ARROWS,
       "text-rotation-alignment": "map",
       "text-keep-upright": true,
+      // смещаем стрелку на ту же сторону, что и линия
+      "text-offset": [0,TEXT_OFFSET_ARROWS],
     },
     paint: {
       "text-color": MAP_COLORS.ROUTE_MAIN,
@@ -75,9 +79,11 @@ export function addRouteLayers(map: Map): void {
       "symbol-placement": "line",
       "text-field": "◀",
       "symbol-spacing": 80,
-      "text-size": 12,
+      "text-size": TEXT_SIZE_ARROWS,
       "text-rotation-alignment": "map",
       "text-keep-upright": true,
+      // смещаем стрелку на ту же сторону, что и линия
+      "text-offset": [0,TEXT_OFFSET_ARROWS],
     },
     paint: {
       "text-color": MAP_COLORS.ROUTE_MAIN,

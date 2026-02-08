@@ -47,7 +47,6 @@ export function buildRouteFeatures(
       ];
 
       const direction = getDirectionFromVector(start, end);
-console.log("ROUTE", id, { direction, start, end });
       return {
         type: "Feature",
         geometry: f.geometry, // ⬅️ БЕЗ ИЗМЕНЕНИЙ
