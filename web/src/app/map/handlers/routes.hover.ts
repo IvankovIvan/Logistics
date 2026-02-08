@@ -1,90 +1,71 @@
-// file: web/src/app/map/handlers/routes.hover.ts
-// routes.hover.ts
+// web/src/app/map/handlers/routes.hover.ts
 // Hover-логика для маршрутов.
 //
 // Ответственность:
-// - подсветка forward / backward линии
-// - управление hover-слоями
+// - подсветка конкретного маршрута
 // - popup по центру линии
 //
 // Инварианты:
 // - НЕ добавляет слои
 // - НЕ трогает source
 // - НЕ хранит глобальное состояние
-// - работает только через map API
+// - hover ТОЛЬКО по id
 
 import maplibregl, { type Map, type MapMouseEvent } from "maplibre-gl";
 import type { FilterSpecification } from "maplibre-gl";
 
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
 /**
  * Возвращает midpoint линии для позиционирования popup.
- * Используется ТОЛЬКО для UI, данные не модифицирует.
+ * Используется ТОЛЬКО для UI.
  */
 function getLineMidpoint(line: GeoJSON.LineString): [number, number] {
   const coords = line.coordinates;
-  if (coords.length === 0) return [0, 0];
+  if (!coords.length) return [0, 0];
 
   const mid = coords[Math.floor(coords.length / 2)];
   return [mid[0], mid[1]];
 }
 
-/**
- * Подключает hover-обработчики маршрутов.
- *
- * Требования:
- * - слои маршрутов уже добавлены
- * - hover-слои существуют
- *
- * @param map MapLibre instance
- */
+/* ------------------------------------------------------------------ */
+/* Hover handlers                                                     */
+/* ------------------------------------------------------------------ */
+
 export function attachRouteHoverHandlers(map: Map) {
   let popup: maplibregl.Popup | null = null;
-  let activeLabel: string | null = null;
-  let activeDirection: "forward" | "backward" | null = null;
+  let activeRouteId: string | null = null;
 
-  const emptyFilter: FilterSpecification = ["==", ["get", "label"], ""];
+  const emptyFilter: FilterSpecification = ["==", ["get", "id"], ""];
 
   /**
-   * Применяет hover-фильтр к нужному направлению
+   * Применяет hover-фильтр по route id
    */
-  function setHover(
-    direction: "forward" | "backward",
-    label: string | null
-  ) {
+  function setHover(routeId: string | null) {
     const filter: FilterSpecification =
-      label === null
+      routeId === null
         ? emptyFilter
-        : [
-            "all",
-            ["==", ["get", "direction"], direction],
-            ["==", ["get", "label"], label],
-          ];
+        : ["==", ["get", "id"], routeId];
 
-    if (direction === "forward") {
-      map.setFilter("routes-line-forward-hover", filter);
-      map.setFilter("routes-line-backward-hover", emptyFilter);
-    } else {
-      map.setFilter("routes-line-backward-hover", filter);
-      map.setFilter("routes-line-forward-hover", emptyFilter);
-    }
+    map.setFilter("routes-line-forward-hover", filter);
   }
 
   /**
-   * Общий обработчик наведения
+   * Наведение на маршрут
    */
   function handleEnter(
-    direction: "forward" | "backward",
     e: MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }
   ) {
     const f = e.features?.[0];
     if (!f) return;
 
-    const label = String(f.properties?.label ?? "");
-    if (!label) return;
+    const routeId = String(f.properties?.id ?? "");
+    if (!routeId) return;
 
-    activeLabel = label;
-    activeDirection = direction;
-    setHover(direction, label);
+    activeRouteId = routeId;
+    setHover(routeId);
 
     if (!popup) {
       popup = new maplibregl.Popup({
@@ -94,43 +75,43 @@ export function attachRouteHoverHandlers(map: Map) {
     }
 
     const midpoint = getLineMidpoint(f.geometry as GeoJSON.LineString);
-    popup.setLngLat(midpoint).setText(`Route ${label}`).addTo(map);
+    popup
+      .setLngLat(midpoint)
+      .setText(`Route ${routeId}`)
+      .addTo(map);
 
     map.getCanvas().style.cursor = "pointer";
   }
 
   /**
-   * Сброс hover-состояния
+   * Уход курсора
    */
   function handleLeave() {
-    activeLabel = null;
-    activeDirection = null;
-
-    setHover("forward", null);
-    setHover("backward", null);
+    activeRouteId = null;
+    setHover(null);
 
     popup?.remove();
     map.getCanvas().style.cursor = "";
   }
 
-  // Подключаем события
-  map.on("mouseenter", "routes-line-forward", (e) =>
-    handleEnter("forward", e)
-  );
-  map.on("mouseenter", "routes-line-backward", (e) =>
-    handleEnter("backward", e)
-  );
+  /* ------------------------------------------------------------------ */
+  /* Event bindings                                                     */
+  /* ------------------------------------------------------------------ */
 
+  map.on("mouseenter", "routes-line-forward", handleEnter);
   map.on("mouseleave", "routes-line-forward", handleLeave);
-  map.on("mouseleave", "routes-line-backward", handleLeave);
 
-  /**
-   * Возвращаем API для восстановления hover после setData
-   */
+  /* ------------------------------------------------------------------ */
+  /* Public API                                                         */
+  /* ------------------------------------------------------------------ */
+
   return {
+    /**
+     * Восстанавливает hover после setData
+     */
     restoreHover() {
-      if (activeLabel && activeDirection) {
-        setHover(activeDirection, activeLabel);
+      if (activeRouteId) {
+        setHover(activeRouteId);
       }
     },
   };

@@ -18,7 +18,7 @@ import { addRouteLayers } from "../layers/routes.layers";
 import { attachRouteHoverHandlers } from "../handlers/routes.hover";
 import { attachWarehouseHoverHandlers } from "../handlers/warehouses.hover";
 
-import { buildAggregatedDirectionalRoutes } from "../transform/routes";
+import { buildRouteFeatures } from "../transform/routes";
 import type { MapBounds } from "../transform";
 
 /* ------------------------------------------------------------------ */
@@ -104,7 +104,7 @@ export class MapFacade {
     addMapSources(
       this.map,
       warehousesGeoJson,
-      buildAggregatedDirectionalRoutes(routesGeoJson)
+      buildRouteFeatures(routesGeoJson)
     );
 
     /* Layers */
@@ -140,7 +140,7 @@ export class MapFacade {
 
     updateRouteSource(
       this.map,
-      buildAggregatedDirectionalRoutes(data.routesGeoJson)
+      buildRouteFeatures(data.routesGeoJson)
     );
 
     this.routeHover?.restoreHover();
