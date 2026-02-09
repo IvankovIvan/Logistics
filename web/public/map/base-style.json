@@ -1,29 +1,15 @@
 {
-  "_comment": "file: web/public/map/base-style.json",
   "version": 8,
-  "name": "base-neutral",
-  "metadata": {
-    "phase": "Project 1.4 / Phase 1 — Base Map Control",
-    "purpose": "Provide a fully controlled, neutral base map for the application.",
-    "constraints": [
-      "No labels",
-      "No POI",
-      "No roads as semantic objects",
-      "No vector tile dependencies",
-      "No GeoJSON datasets",
-      "No visual meaning — background only"
-    ],
-    "notes": [
-      "This style intentionally contains ONLY a background layer.",
-      "Administrative borders are intentionally excluded in Phase 1.",
-      "Any vector or border datasets would introduce uncontrolled external schema dependencies.",
-      "Borders may be reintroduced in later phases with a controlled dataset."
-    ]
+  "name": "base-neutral-with-borders",
+
+  "glyphs": "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=D9xNoMhtxFhgTxFI2GFx",
+
+  "sources": {
+    "omt": {
+      "type": "vector",
+      "url": "https://api.maptiler.com/tiles/v3/tiles.json?key=D9xNoMhtxFhgTxFI2GFx"
+    }
   },
-
-  "glyphs": "https://demotiles.maplibre.org/fonts/{fontstack}/{range}.pbf",
-
-  "sources": {},
 
   "layers": [
     {
@@ -31,6 +17,33 @@
       "type": "background",
       "paint": {
         "background-color": "#f8fafc"
+      }
+    },
+
+    {
+      "id": "admin-country-borders",
+      "type": "line",
+      "source": "omt",
+      "source-layer": "boundary",
+      "filter": ["==", ["get", "admin_level"], 2],
+      "paint": {
+        "line-color": "#64748b",
+        "line-width": 1.4,
+        "line-opacity": 0.9
+      }
+    },
+
+    {
+      "id": "admin-region-borders",
+      "type": "line",
+      "source": "omt",
+      "source-layer": "boundary",
+      "filter": ["==", ["get", "admin_level"], 4],
+      "paint": {
+        "line-color": "#cbd5e1",
+        "line-width": 0.8,
+        "line-dasharray": [2, 2],
+        "line-opacity": 0.8
       }
     }
   ]
