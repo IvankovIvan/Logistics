@@ -18,6 +18,7 @@ class WarehouseUpsertPayload(BaseModel):
     lat: float = Field(..., description="Широта")
     lon: float = Field(..., description="Долгота")
     status: str = Field(..., description="Текущий статус склада")
+    quantity: int = Field(..., description="Текущее количество товара на складе")
 
 
 class ShipmentUpsertPayload(BaseModel):

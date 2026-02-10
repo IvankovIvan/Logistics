@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from models import ShipmentStatus, WarehouseStatus
+from app.models.shipment import ShipmentStatus
+from app.models.warehouse import WarehouseStatus
 
 
 class WarehouseLike(Protocol):
@@ -22,6 +23,7 @@ class WarehouseLike(Protocol):
     lon: float | int | str
     lat: float | int | str
     status: WarehouseStatus | str | None
+    quantity: int | str
 
 
 class ShipmentLike(Protocol):

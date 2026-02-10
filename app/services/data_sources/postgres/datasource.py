@@ -20,7 +20,10 @@ class PostgresDataSource(CurrentStateDataSource):
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(queries.WAREHOUSES_CURRENT)
-                return cur.fetchall()
+                warehouses = cur.fetchall()
+                if any(w.get("quantity") is None for w in warehouses):
+                    raise ValueError("warehouse missing quantity in postgres data source")
+                return warehouses
 
     def get_shipments(self):
         with get_connection() as conn:

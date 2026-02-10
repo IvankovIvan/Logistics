@@ -16,6 +16,8 @@ class FakeDataSource(CurrentStateDataSource):
     """
 
     def get_warehouses(self) -> List[Dict]:
+        if any(w.get("quantity") is None for w in FAKE_WAREHOUSES):
+            raise ValueError("warehouse missing quantity in fake data source")
         return FAKE_WAREHOUSES
 
     def get_shipments(self) -> List[Dict]:

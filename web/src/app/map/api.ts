@@ -13,6 +13,7 @@ export type MapWarehouse = {
   status: string;
   lon: number;
   lat: number;
+  quantity: number;
 };
 
 export type MapRoute = {

@@ -83,7 +83,7 @@ export class MapFacade {
   init(data: {
     warehousesGeoJson: GeoJSON.FeatureCollection<
       GeoJSON.Point,
-      { id: string; name: string; status: string }
+      { id: string; name: string; status: string; quantity: number }
     >;
     routesGeoJson: GeoJSON.FeatureCollection<
       GeoJSON.LineString,

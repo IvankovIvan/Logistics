@@ -75,6 +75,15 @@ def ingest_events(events: Iterable):
                 # 2) Apply current-state
                 # -------------------------------------------------
                 if ev.entity_type == "warehouse":
+                    if "quantity" not in payload:
+                        event_results.append(
+                            {
+                                "event_id": ev.event_id,
+                                "status": "rejected",
+                                "reason": "warehouse payload missing quantity",
+                            }
+                        )
+                        continue
                     cur.execute(
                         UPSERT_WAREHOUSE,
                         {
@@ -83,6 +92,7 @@ def ingest_events(events: Iterable):
                             "status": payload["status"],
                             "lon": payload["lon"],
                             "lat": payload["lat"],
+                            "quantity": payload["quantity"],
                             "event_time": ev.event_time,
                         },
                     )

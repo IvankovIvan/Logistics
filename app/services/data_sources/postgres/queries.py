@@ -14,7 +14,8 @@ SELECT
     name,
     status,
     ST_X(location) AS lon,
-    ST_Y(location) AS lat
+    ST_Y(location) AS lat,
+    quantity
 FROM warehouses_current;
 """
 

@@ -1,5 +1,5 @@
 # app/services/data_sources/fake_data.py
-from models import ShipmentStatus
+from app.models.shipment import ShipmentStatus
 
 # =====================================================
 # Fake warehouses (read-model compatible)
@@ -12,6 +12,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 59.9311,
         "lon": 30.3609,
+        "quantity": 1200,
     },
     {
         "id": "msk-01",
@@ -19,6 +20,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 55.7558,
         "lon": 37.6173,
+        "quantity": 800,
     },
     {
         "id": "hel-01",
@@ -26,6 +28,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 60.1699,
         "lon": 24.9384,
+        "quantity": 150,
     },
     {
         "id": "kzn-01",
@@ -33,6 +36,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 55.7903,
         "lon": 49.1347,
+        "quantity": 400,
     },
     {
         "id": "ekb-01",
@@ -40,6 +44,7 @@ FAKE_WAREHOUSES = [
         "status": "maintenance",
         "lat": 56.8389,
         "lon": 60.6057,
+        "quantity": 0,
     },
     {
         "id": "nsk-01",
@@ -47,6 +52,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 55.0084,
         "lon": 82.9357,
+        "quantity": 220,
     },
     {
         "id": "mur-01",
@@ -54,6 +60,7 @@ FAKE_WAREHOUSES = [
         "status": "active",
         "lat": 68.9585,
         "lon": 33.0827,
+        "quantity": 40,
     },
     {
         "id": "sochi-01",
@@ -61,6 +68,7 @@ FAKE_WAREHOUSES = [
         "status": "closed",
         "lat": 43.5855,
         "lon": 39.7231,
+        "quantity": 15,
     },
 ]
 

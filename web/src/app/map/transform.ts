@@ -14,13 +14,16 @@ export type MapBounds = [[number, number], [number, number]] | null;
 
 export function toWarehousesGeoJson(
   warehouses: MapResponse["warehouses"]
-): GeoJSON.FeatureCollection<GeoJSON.Point, { id: string; name: string; status: string }> {
+): GeoJSON.FeatureCollection<
+  GeoJSON.Point,
+  { id: string; name: string; status: string; quantity: number }
+> {
   return {
     type: "FeatureCollection",
     features: warehouses.map((w) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [w.lon, w.lat] },
-      properties: { id: w.id, name: w.name, status: w.status },
+      properties: { id: w.id, name: w.name, status: w.status, quantity: w.quantity },
     })),
   };
 }

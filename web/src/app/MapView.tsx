@@ -45,7 +45,7 @@ type MapViewProps = {
   warehousesGeoJson:
     | GeoJSON.FeatureCollection<
         GeoJSON.Point,
-        { id: string; name: string; status: string }
+        { id: string; name: string; status: string; quantity: number }
       >
     | null;
 

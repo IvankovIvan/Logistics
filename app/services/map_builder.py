@@ -81,9 +81,11 @@ def build_map_response(
             # - фронт не умеет рендерить "пустые" точки
             # - карта должна быть устойчивой к частичным данным
             continue
-
         lon = float(w.lon)
         lat = float(w.lat)
+        if getattr(w, "quantity", None) is None:
+            raise ValueError(f"warehouse {w.id} missing quantity")
+        quantity = int(w.quantity)
 
         w_status = coerce_enum(
             getattr(w, "status", None),
@@ -101,6 +103,7 @@ def build_map_response(
                 status=w_status,
                 lon=lon,
                 lat=lat,
+                quantity=quantity,
             )
         )
 

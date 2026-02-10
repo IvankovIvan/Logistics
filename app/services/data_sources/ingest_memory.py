@@ -18,18 +18,22 @@ class InMemoryIngestDataSource(CurrentStateDataSource):
     """
 
     def get_warehouses(self) -> List[Dict]:
-        return [
+        warehouses = [
             {
                 "id": payload.id,
                 "name": payload.name,
                 "lat": payload.lat,
                 "lon": payload.lon,
                 "status": payload.status,
+                "quantity": payload.quantity,
             }
             for payload in (
                 state["payload"] for state in _warehouses_state.values()
             )
         ]
+        if any(w.get("quantity") is None for w in warehouses):
+            raise ValueError("warehouse missing quantity in ingest_mem data source")
+        return warehouses
 
     def get_shipments(self) -> List[Dict]:
         return [

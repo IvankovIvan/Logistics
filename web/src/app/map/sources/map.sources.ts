@@ -21,7 +21,7 @@ import type { FeatureCollection, Point, LineString } from "geojson";
 
 export type WarehousesGeoJson = FeatureCollection<
   Point,
-  { id: string; name: string; status: string }
+  { id: string; name: string; status: string; quantity: number }
 >;
 
 export type RoutesGeoJson = FeatureCollection<

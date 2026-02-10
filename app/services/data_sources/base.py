@@ -28,7 +28,8 @@ class CurrentStateDataSource(ABC):
             name: str,
             lat: float,
             lon: float,
-            status: str
+            status: str,
+            quantity: int
         }
         """
         raise NotImplementedError

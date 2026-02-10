@@ -34,6 +34,7 @@ def seed_ingest_state():
                 lat=55.0,
                 lon=37.0,
                 status="active",
+                quantity=100,
             ),
         )
     )
@@ -49,6 +50,7 @@ def seed_ingest_state():
                 lat=56.0,
                 lon=38.0,
                 status="active",
+                quantity=50,
             ),
         )
     )
@@ -101,6 +103,14 @@ def test_read_model_contract(data_source_factory):
         assert w.id is not None
         assert w.lat is not None
         assert w.lon is not None
+        assert w.quantity is not None
+
+    # --- map response ---
+    from app.services.map_builder import build_map_response
+
+    map_response = build_map_response(warehouses_source=warehouses, shipments_source=[])
+    for w in map_response.warehouses:
+        assert w.quantity is not None
 
     # --- shipments ---
     shipments = data_source.get_shipments()

@@ -12,6 +12,7 @@ INSERT INTO warehouses_current (
     name,
     status,
     location,
+    quantity,
     last_event_time
 )
 VALUES (
@@ -19,6 +20,7 @@ VALUES (
     %(name)s,
     %(status)s,
     ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326),
+    %(quantity)s,
     %(event_time)s
 )
 ON CONFLICT (id) DO UPDATE
@@ -26,6 +28,7 @@ SET
     name = EXCLUDED.name,
     status = EXCLUDED.status,
     location = EXCLUDED.location,
+    quantity = EXCLUDED.quantity,
     last_event_time = EXCLUDED.last_event_time,
     updated_at = now()
 WHERE warehouses_current.last_event_time <= EXCLUDED.last_event_time;

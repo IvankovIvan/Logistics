@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS warehouses_current (
     status           TEXT NOT NULL,
 
     location         geometry(Point, 4326) NOT NULL,
+    quantity         BIGINT NOT NULL,
 
     last_event_time  TIMESTAMPTZ NOT NULL,
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
