@@ -5,13 +5,11 @@ from collections.abc import Iterable, Mapping
 
 from app.domain.coercion import coerce_enum, normalize_shipment, normalize_warehouse
 from app.domain.protocols import ShipmentLike, WarehouseLike
-from models import (
-    MapResponse,
-    MapRoute,
-    MapWarehouse,
-    ShipmentStatus,
-    WarehouseStatus,
-)
+from app.models.map_response import MapResponse
+from app.models.map_route import MapRoute
+from app.models.map_warehouse import MapWarehouse
+from app.models.shipment import ShipmentStatus
+from app.models.warehouse import WarehouseStatus
 
 from app.services.data_sources.base import CurrentStateDataSource
 from app.services.data_sources.selector import get_current_state_data_source
