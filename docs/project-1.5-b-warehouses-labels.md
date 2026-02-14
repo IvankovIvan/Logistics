@@ -109,3 +109,20 @@ Definition of Done
 	•	Номер читаем при среднем zoom
 	•	Quantity читаем при близком zoom
 	•	Архитектура MapFacade не нарушена
+
+---
+
+## Status
+
+Project №1.5.b — COMPLETED
+
+Инварианты соблюдены:
+- zoom-based symbol-layer
+- без интерактивности
+- без feature-state
+- без аналитики
+- transform.ts не изменён
+- circle-layer не затронут
+- backend не изменён
+
+Дата фиксации: 2026-02-14
