@@ -97,8 +97,9 @@ export class MapFacade {
       buildRouteFeatures(routesGeoJson)
     );
 
-    addWarehouseLayers(this.map);
     addRouteLayers(this.map);
+    addWarehouseLayers(this.map);
+    
 
     // Route hover enabled (Project 1.3).
     // Warehouse hover intentionally NOT attached (Project 1.5.a invariant).
