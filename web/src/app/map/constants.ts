@@ -68,6 +68,19 @@ export const MAP_COLORS = {
 } as const;
 
 /* ------------------------------------------------------------------ */
+/* Warehouse radius constants                                          */
+/* ------------------------------------------------------------------ */
+// Project 1.5.a
+// Log-scale radius encoding for warehouses:
+// radius = clamp(minR + k * log10(quantity + 1), minR, maxR)
+// Эти значения являются визуальными инвариантами и
+// не должны изменяться без пересмотра project-1.5a-warehouses-geometry.md
+
+export const WAREHOUSE_MIN_R = 4 as const;
+export const WAREHOUSE_MAX_R = 18 as const;
+export const WAREHOUSE_K = 4 as const;
+
+/* ------------------------------------------------------------------ */
 /* Route offsets                                                      */
 /* ------------------------------------------------------------------ */
 

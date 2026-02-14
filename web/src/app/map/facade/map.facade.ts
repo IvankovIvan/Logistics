@@ -19,7 +19,6 @@ import { addWarehouseLayers } from "../layers/warehouses.layers";
 import { addRouteLayers } from "../layers/routes.layers";
 
 import { attachRouteHoverHandlers } from "../handlers/routes.hover";
-import { attachWarehouseHoverHandlers } from "../handlers/warehouses.hover";
 
 import { buildRouteFeatures } from "../transform/routes";
 import type { MapBounds } from "../transform";
@@ -64,9 +63,6 @@ export class MapFacade {
 
   private routeHover: ReturnType<typeof attachRouteHoverHandlers> | null =
     null;
-  private warehouseHover:
-    | ReturnType<typeof attachWarehouseHoverHandlers>
-    | null = null;
 
   constructor({ map }: { map: Map }) {
     this.map = map;
@@ -104,8 +100,9 @@ export class MapFacade {
     addWarehouseLayers(this.map);
     addRouteLayers(this.map);
 
+    // Route hover enabled (Project 1.3).
+    // Warehouse hover intentionally NOT attached (Project 1.5.a invariant).
     this.routeHover = attachRouteHoverHandlers(this.map);
-    this.warehouseHover = attachWarehouseHoverHandlers(this.map);
 
     if (bounds) {
       this.map.fitBounds(bounds, { padding: 80 });
