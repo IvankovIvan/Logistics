@@ -120,23 +120,52 @@ export function addWarehouseLayers(map: Map): void {
   });
 
   /* ------------------------------------------------------------------ */
-  /* Warehouses: labels (reserved for 1.5.b)                            */
+  /* Warehouses: labels (Project 1.5.b)                                 */
   /* ------------------------------------------------------------------ */
 
   map.addLayer({
     id: MAP_LAYERS.WAREHOUSES_LABELS,
     type: "symbol",
     source: MAP_SOURCES.WAREHOUSES,
-    minzoom: MAP_ZOOM.WAREHOUSE_LABELS_MIN,
 
     layout: {
-      // В 1.5.a подписи ЗАПРЕЩЕНЫ → слой выключен
-      visibility: "none",
+      // Логика zoom через expression
+      "text-field": [
+        "step",
+        ["zoom"],
 
-      "text-field": ["concat", ["get", "name"], " ", ["get", "id"]],
+        // Z < 5 → ничего
+        "",
+
+        // 5 ≤ Z < 6.5 → только номер
+        5,
+        ["concat", "№", ["get", "id"]],
+
+        // Z ≥ 6.5 → номер + имя + перенос строки + quantity
+        6.5,
+        [
+          "format",
+          ["concat", "№", ["get", "id"], " ", ["get", "name"]],
+          { "font-scale": 1.0 },
+
+          "\n",
+          {},
+
+          ["get", "quantity"],
+          { "font-scale": 0.95 }
+        ]
+      ],
+
+      // Текст справа от круга
+      "text-anchor": "left",
+      "text-offset": [1.5, 0],
+
       "text-size": 11,
-      "text-anchor": "top",
-      "text-offset": [0, 1.1],
+
+      // 🔐 защита от длинных имён
+      "text-max-width": 12,
+
+      // Не даём тексту перекрывать точки
       "text-allow-overlap": false,
       "text-ignore-placement": false,
     },
