@@ -106,6 +106,7 @@ def ingest_events(events: Iterable):
                             "from_node": payload["from_warehouse_id"],
                             "to_node": payload["to_warehouse_id"],
                             "status": payload["status"],
+                            "volume": payload["volume"],
                             "event_time": ev.event_time,
                         },
                     )

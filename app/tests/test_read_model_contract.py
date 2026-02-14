@@ -65,6 +65,7 @@ def seed_ingest_state():
                 from_warehouse_id="wh-1",
                 to_warehouse_id="wh-2",
                 status="in_transit",
+                volume=10,
             ),
         )
     )

@@ -41,6 +41,7 @@ INSERT INTO shipments_current (
     from_node,
     to_node,
     status,
+    volume,
     last_event_time
 )
 VALUES (
@@ -48,6 +49,7 @@ VALUES (
     %(from_node)s,
     %(to_node)s,
     %(status)s,
+    %(volume)s,
     %(event_time)s
 )
 ON CONFLICT (id) DO UPDATE
@@ -55,6 +57,7 @@ SET
     from_node = EXCLUDED.from_node,
     to_node = EXCLUDED.to_node,
     status = EXCLUDED.status,
+    volume = EXCLUDED.volume,
     last_event_time = EXCLUDED.last_event_time,
     updated_at = now()
 WHERE shipments_current.last_event_time <= EXCLUDED.last_event_time;

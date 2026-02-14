@@ -29,6 +29,11 @@ class ShipmentUpsertPayload(BaseModel):
     from_warehouse_id: str = Field(..., description="Склад-источник")
     to_warehouse_id: str = Field(..., description="Склад-назначения")
     status: str = Field(..., description="Текущий статус перевозки")
+    volume: int = Field(
+        ...,
+        ge=0,
+        description="Абсолютный объём перевозки (>= 0)"
+    )
 
 
 # =====================================================
