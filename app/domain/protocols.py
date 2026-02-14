@@ -42,3 +42,7 @@ class ShipmentLike(Protocol):
     from_node: str
     to_node: str
     status: ShipmentStatus | str | None
+    # Project 1.6.a:
+    # volume is required current-state absolute shipment volume (>= 0).
+    # Read-side must not compute it.
+    volume: int | str

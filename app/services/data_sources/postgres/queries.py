@@ -24,7 +24,8 @@ SELECT
     id,
     from_node,
     to_node,
-    status
+    status,
+    volume
 FROM shipments_current;
 """
 

@@ -14,6 +14,11 @@ class MapRoute(BaseModel):
     """
     id: str = Field(..., description="ID перевозки")
     status: ShipmentStatus = Field(..., description="Статус перевозки")
+    # Project 1.6.a: required shipment volume (current-state).
+    volume: int = Field(
+        ...,
+        description="Абсолютный объём перевозки (>= 0, current-state)",
+    )
 
     from_id: str = Field(..., alias="from", description="ID склада отправления", examples=["spb-01"])
     to_id: str = Field(..., alias="to", description="ID склада назначения", examples=["msk-01"])

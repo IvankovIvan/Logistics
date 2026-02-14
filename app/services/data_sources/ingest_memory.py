@@ -42,6 +42,7 @@ class InMemoryIngestDataSource(CurrentStateDataSource):
                 "from_node": payload.from_warehouse_id,
                 "to_node": payload.to_warehouse_id,
                 "status": payload.status,
+                "volume": payload.volume,
             }
             for payload in (
                 state["payload"] for state in _shipments_state.values()

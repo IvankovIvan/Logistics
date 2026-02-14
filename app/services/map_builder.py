@@ -126,6 +126,14 @@ def build_map_response(
             # (нет координат или склад отсутствует в current-state)
             continue
 
+        # Project 1.6.a invariant:
+        # volume is absolute current-state value and must exist.
+        if getattr(s, "volume", None) is None:
+            raise ValueError(f"shipment {s.id} missing volume")
+        volume = int(s.volume)
+        if volume < 0:
+            raise ValueError(f"shipment {s.id} has negative volume")
+
         status = coerce_enum(
             getattr(s, "status", None),
             ShipmentStatus,
@@ -139,6 +147,7 @@ def build_map_response(
             MapRoute(
                 id=str(s.id),
                 status=status,
+                volume=volume,
                 **{"from": from_id, "to": to_id},  # from/to — ключевые слова Python
                 coordinates=[
                     (from_lon, from_lat),

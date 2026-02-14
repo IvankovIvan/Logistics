@@ -116,6 +116,10 @@ def test_read_model_contract(data_source_factory):
     # --- shipments ---
     shipments = data_source.get_shipments()
     for raw in shipments:
+        # Project 1.6.a contract: shipment volume is required.
+        assert "volume" in raw
+        assert isinstance(raw["volume"], int)
+        assert raw["volume"] >= 0
         s = normalize_shipment(raw)
         assert s.id is not None
         assert s.from_node is not None
