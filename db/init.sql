@@ -49,8 +49,15 @@ CREATE TABLE IF NOT EXISTS shipments_current (
 
     status           TEXT NOT NULL,
 
+    -- Project 1.6.a
+    -- Shipment volume as current-state (absolute value, >= 0)
+    -- Symmetric to warehouses_current.quantity
+    volume           INTEGER NOT NULL,
+
     last_event_time  TIMESTAMPTZ NOT NULL,
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT shipments_current_volume_check CHECK (volume >= 0),
 
     CONSTRAINT fk_shipments_from
         FOREIGN KEY (from_node)
