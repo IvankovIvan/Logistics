@@ -26,7 +26,7 @@ export type WarehousesGeoJson = FeatureCollection<
 
 export type RoutesGeoJson = FeatureCollection<
   LineString,
-  { id: string; status: string; from: string; to: string }
+  { id: string; status: string; from: string; to: string; volume: number }
 >;
 
 /* ------------------------------------------------------------------ */

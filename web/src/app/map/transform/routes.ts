@@ -24,6 +24,7 @@ export type RouteInputProps = {
   status: string;
   from: string;
   to: string;
+  volume?: number;
 };
 
 export type RouteVisualProps = {
@@ -31,6 +32,7 @@ export type RouteVisualProps = {
   status: string;
   direction: RouteDirection;
   label: string;
+  volume?: number;
 };
 
 export function buildRouteFeatures(
@@ -39,7 +41,7 @@ export function buildRouteFeatures(
   return {
     type: "FeatureCollection",
     features: routes.features.map((f) => {
-      const { id, status } = f.properties;
+      const { id, status, volume } = f.properties;
 
       const [start, end] = f.geometry.coordinates as [
         Position,
@@ -55,6 +57,7 @@ export function buildRouteFeatures(
           status,
           direction,
           label: id,
+          volume,
         },
       };
     }),

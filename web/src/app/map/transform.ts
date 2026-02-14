@@ -32,14 +32,20 @@ export function toRoutesGeoJson(
   routes: MapResponse["routes"]
 ): GeoJSON.FeatureCollection<
   GeoJSON.LineString,
-  { id: string; status: MapResponse["routes"][number]["status"]; from: string; to: string }
+  {
+    id: string;
+    status: MapResponse["routes"][number]["status"];
+    from: string;
+    to: string;
+    volume: MapResponse["routes"][number]["volume"];
+  }
 > {
   return {
     type: "FeatureCollection",
     features: routes.map((r) => ({
       type: "Feature",
       geometry: { type: "LineString", coordinates: r.coordinates },
-      properties: { id: r.id, status: r.status, from: r.from, to: r.to },
+      properties: { id: r.id, status: r.status, from: r.from, to: r.to, volume: r.volume },
     })),
   };
 }

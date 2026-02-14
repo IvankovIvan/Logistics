@@ -23,6 +23,8 @@ export type MapRoute = {
   // Можно ужесточить до union-типа позже (planned/in_transit/...).
   status: string;
 
+  volume: number;
+
   from: string;
   to: string;
 

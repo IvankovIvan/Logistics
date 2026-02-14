@@ -81,6 +81,15 @@ export const WAREHOUSE_MAX_R = 18 as const;
 export const WAREHOUSE_K = 4 as const;
 
 /* ------------------------------------------------------------------ */
+/* Route width constants                                              */
+/* ------------------------------------------------------------------ */
+// Project 1.6.b
+// width = clamp(minW + k * log10(volume + 1), minW, maxW)
+export const ROUTE_MIN_W = 1.5 as const;
+export const ROUTE_MAX_W = 8 as const;
+export const ROUTE_K = 2.5 as const;
+
+/* ------------------------------------------------------------------ */
 /* Route offsets                                                      */
 /* ------------------------------------------------------------------ */
 

@@ -7,12 +7,33 @@ import {
   MAP_ZOOM,
   MAP_COLORS,
   ROUTE_OFFSETS,
+  ROUTE_MIN_W,
+  ROUTE_MAX_W,
+  ROUTE_K,
   ROUTE_STATUS_COLORS,
   TEXT_OFFSET_ARROWS,
   TEXT_SIZE_ARROWS,
 } from "../constants";
 
 export function addRouteLayers(map: Map): void {
+  const routeWidthExpression = [
+    "min",
+    ROUTE_MAX_W,
+    [
+      "max",
+      ROUTE_MIN_W,
+      [
+        "+",
+        ROUTE_MIN_W,
+        [
+          "*",
+          ROUTE_K,
+          ["/", ["ln", ["+", ["get", "volume"], 1]], ["ln", 10]],
+        ],
+      ],
+    ],
+  ];
+
   /* ------------------------------------------------------------------ */
   /* Lines                                                              */
   /* ------------------------------------------------------------------ */
@@ -24,7 +45,7 @@ export function addRouteLayers(map: Map): void {
     filter: ["==", ["get", "direction"], "forward"],
     minzoom: MAP_ZOOM.ROUTES_MIN,
     paint: {
-      "line-width": 2,
+      "line-width": routeWidthExpression,
 
       // ⬅️ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ
       // цвет берётся из properties.status
@@ -50,7 +71,7 @@ export function addRouteLayers(map: Map): void {
     filter: ["==", ["get", "direction"], "backward"],
     minzoom: MAP_ZOOM.ROUTES_MIN,
     paint: {
-      "line-width": 2,
+      "line-width": routeWidthExpression,
       "line-color": [
         "match",
         ["get", "status"],
