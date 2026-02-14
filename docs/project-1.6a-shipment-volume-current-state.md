@@ -1,130 +1,188 @@
-# Project №1.6.a — Shipment Volume as Current-State
+Project №1.6.a — Shipment Volume as Current-State
 
-Проект: Logistics  
-Репозиторий: https://github.com/IvankovIvan/Logistics  
+Проект: Logistics
+Репозиторий: https://github.com/IvankovIvan/Logistics
+Статус: COMPLETED
 
-Контекст:
-Project №1.1–1.5 завершены.
-Quantity складов реализован как first-class current-state (Project №1.4).
-Project №1.6 — расширение current-state маршрутов.
+⸻
 
----
+🎯 Цель этапа
 
-## 🎯 Цель этапа
+Добавить volume как first-class current-state поле для shipments_current, полностью симметрично warehouse.quantity (Project №1.4), без нарушения архитектуры Project №1.
 
-Сделать volume (текущее количество товара “в пути сейчас”)
-first-class current-state полем маршрута (shipment_current),
-достаточным для визуальных инвариантов маршрутов (Project №1.6.b).
+Система должна оставаться:
+	•	витриной “на сейчас”
+	•	без истории
+	•	без аналитики
+	•	без агрегаций
+	•	без вычислений на read-side
+	•	с сохранением idempotency и stale semantics
 
-Без аналитики.  
-Без истории.  
-Без расчётов на read-side.  
-Без нарушения архитектуры Project №1.
+⸻
 
----
+🧱 Архитектурное решение
 
-## 📦 Архитектурная модель
+Принцип
 
-Система симметрична:
+volume — абсолютное текущее значение перевозки.
+	•	Не дельта.
+	•	Не вычисляется.
+	•	Не агрегируется.
+	•	Обновляется только через warehouse/shipment event.
 
-| Сущность | Поле      | Семантика                    |
-|-----------|-----------|------------------------------|
-| warehouses_current | quantity | сколько сейчас лежит |
-| shipments_current  | volume   | сколько сейчас в пути |
+Единственный источник истины — write-side ingest.
 
-Обе величины:
-- абсолютные (не дельта),
-- current-state,
-- задаются write-side,
-- не считаются на read-side,
-- не агрегируются на frontend.
+⸻
 
----
+🗄️ Database
 
-## 🗄️ Изменения модели данных
+Таблица: shipments_current
 
-Таблица:
-`shipments_current`
-
-Добавляется поле:
+Добавлено поле:
 volume INTEGER NOT NULL
+CONSTRAINT shipments_current_volume_check CHECK (volume >= 0)
 
 Инварианты:
-- volume ≥ 0
-- отсутствие volume невозможно
-- NULL запрещён
-- отрицательные значения запрещены
+	•	NULL запрещён
+	•	Отрицательные значения запрещены
+	•	История отсутствует
+	•	Таблица остаётся current-state only
+	•	last_event_time защита сохранена
 
----
+⸻
 
-## 🔌 Ingest семантика
+🔌 Ingest
 
-ShipmentUpsertPayload теперь требует поле:
-volume: int (required)
+ShipmentUpsertPayload
 
-Классификация результата ingest остаётся прежней:
+Добавлено обязательное поле:
 
-1. duplicate — event_id уже обработан
-2. rejected — неподдерживаемый entity_type или отсутствие volume
-3. applied — UPSERT применился (rowcount > 0)
-4. stale — event_time устарел, volume не обновляется
-
-Stale и idempotency логика не меняются.
-
----
-
-## 📡 Read-side
-
-/api/map расширяется:
-
-MapRoute получает обязательное поле:
 volume: int
-Read-side:
-- не вычисляет volume,
-- не агрегирует,
-- не трансформирует,
-- просто прокидывает значение из current-state.
+ge = 0
 
-Отсутствие volume = контрактная ошибка.
+Поведение:
 
----
+Сценарий    Результат
+duplicate   ignore
+rejected    unsupported entity
+stale       volume не обновляется
+applied     volume перезаписывается
 
-## 🎨 Визуальные последствия (Project №1.6.b)
+SQL UPSERT не менялся концептуально:
 
-volume будет кодироваться:
-- толщиной линии маршрута
-- (опционально) подписью по центру линии
+WHERE shipments_current.last_event_time <= EXCLUDED.last_event_time
 
-Геометрия не меняется.
-Offset логика Project №1.3 сохраняется.
+Idempotency полностью сохранена.
 
----
+⸻
 
-## 🔒 Инварианты системы
+📖 Read-Side
 
-✔ система остаётся “витриной на сейчас”  
-✔ нет истории  
-✔ нет аналитики  
-✔ нет расчётов на read-side  
-✔ нет вычислений на frontend  
-✔ маршруты остаются 1 shipment = 1 feature  
-✔ Project №1.1–1.5 не нарушаются  
+Обновлены:
+	•	SHIPMENTS_CURRENT SELECT
+	•	PostgresDataSource
+	•	FAKE_SHIPMENTS
+	•	InMemoryIngestDataSource
+	•	ShipmentLike protocol
+	•	MapRoute модель
+	•	map_builder
 
----
+Правило:
 
-## 📍 Definition of Done
+Отсутствие volume — контрактная ошибка.
 
-- volume хранится в shipments_current
-- ingest требует volume
-- stale semantics не изменены
-- /api/map возвращает volume
-- frontend получает volume без вычислений
-- тесты зелёные
-- контракт стабилен
+Никаких fallback.
+Никаких вычислений.
+Никаких агрегатов.
 
----
+Read-side только прокидывает значение.
 
-## 📌 Статус
+⸻
 
-Project №1.6.a — ARCHITECTURE FIXED  
-Готов к реализации.
+🌐 Контракт /api/map
+
+MapRoute теперь содержит:
+
+volume: int  (required)
+
+Инварианты:
+	•	volume ≥ 0
+	•	volume обязательный
+	•	отсутствие volume = ошибка
+	•	никаких производных значений
+
+⸻
+
+🧪 Тестирование
+
+Добавлены проверки:
+	•	shipment без volume → rejected
+	•	stale не меняет volume
+	•	duplicate не меняет состояние
+	•	applied обновляет volume
+	•	read-model требует volume
+
+Результат:
+
+docker compose exec app pytest
+→ все тесты зелёные
+
+Инварианты Project №1 сохранены
+
+✔ current-state only
+✔ idempotency
+✔ stale semantics
+✔ отсутствие истории
+✔ отсутствие аналитики
+✔ /api/map — единственный публичный контракт
+✔ frontend ничего не считает
+
+⸻
+
+🧱 Архитектурная симметрия
+
+Сущность        Поле        Тип
+warehouse       quantity    INTEGER
+shipment        volume      INTEGER
+
+Обе величины:
+	•	абсолютные
+	•	current-state
+	•	first-class
+	•	обновляются только через события
+	•	не вычисляются на read-side
+	•	не агрегируются
+
+⸻
+
+📦 Результат
+
+После Project №1.6.a система имеет:
+	•	quantity складов
+	•	volume маршрутов
+	•	полностью согласованный current-state контракт
+	•	чистую симметрию сущностей
+	•	готовность к визуализации маршрутов по объёму (Project №1.6.b)
+
+⸻
+
+🧠 Вывод
+
+Project №1.6.a завершён без архитектурных компромиссов.
+
+Система остаётся:
+	•	минималистичной
+	•	детерминированной
+	•	масштабируемой
+	•	без скрытой логики
+	•	без аналитики
+	•	без временных костылей
+
+⸻
+
+Статус:
+
+Project №1.6.a — COMPLETED
+
+
+
