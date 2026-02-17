@@ -51,35 +51,32 @@ import {
  */
 export function buildWarehouseRadiusExpression(): ExpressionSpecification {
   return [
-    "min",
-    WAREHOUSE_MAX_R,
+    "+",
+    WAREHOUSE_MIN_R,
     [
-      "max",
-      WAREHOUSE_MIN_R,
+      "*",
       [
-        "+",
-        WAREHOUSE_MIN_R,
+        "min",
+        1,
         [
-          "*",
-          WAREHOUSE_K,
+          "max",
+          0,
           [
             "/",
             [
-              "ln",
+              "-",
               [
-                "+",
-                [
-                  "max",
-                  0,
-                  ["get", "quantity"], // защита от отрицательных значений
-                ],
-                1,
+                "/",
+                ["ln", ["max", 1, ["get", "quantity"]]],
+                ["ln", 10],
               ],
+              2, // log10(100)
             ],
-            Math.log(10),
+            1, // log10(1000) - log10(100)
           ],
         ],
       ],
+      WAREHOUSE_MAX_R - WAREHOUSE_MIN_R,
     ],
   ];
 }
@@ -139,13 +136,13 @@ export function addWarehouseLayers(map: Map): void {
 
         // 5 ≤ Z < 6.5 → только номер
         5,
-        ["concat", "№", ["get", "id"]],
+        ["concat", "", ["get", "id"]],
 
         // Z ≥ 6.5 → номер + имя + перенос строки + quantity
         6.5,
         [
           "format",
-          ["concat", "№", ["get", "id"], " ", ["get", "name"]],
+          ["concat", "", ["get", "id"], " ", ["get", "name"]],
           { "font-scale": 1.0 },
 
           "\n",

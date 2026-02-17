@@ -80,6 +80,10 @@ export const WAREHOUSE_MIN_R = 4 as const;
 export const WAREHOUSE_MAX_R = 18 as const;
 export const WAREHOUSE_K = 4 as const;
 
+// Warehouse normalization bounds (Project 1.5.a refined)
+export const WAREHOUSE_Q_MIN = 100 as const;
+export const WAREHOUSE_Q_MAX = 1000 as const;
+
 /* ------------------------------------------------------------------ */
 /* Route width constants                                              */
 /* ------------------------------------------------------------------ */
