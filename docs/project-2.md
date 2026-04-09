@@ -1,233 +1,203 @@
-Project №2 — Analytics Layer (Warehouse Metrics Platform)
-
-Статус
-
-Draft → Architecture Locked
-Расширяет систему поверх Project №1 без изменения его инвариантов.
+Project №2 — Analytics Layer (Final Architecture)
 
 ⸻
 
-1. Назначение
+1. Цель
 
-Project №2 превращает карту Logistics в универсальную аналитическую платформу,
-где пользователь выбирает метрику и период,
-а карта визуализирует агрегированные значения по складам.
+Project №2 — это изолированный аналитический слой поверх Project №1 (OLTP).
 
-Project №2:
-	•	не изменяет Project №1
-	•	не превращает current-state в BI
-	•	не ломает /api/map
-	•	добавляет отдельный аналитический слой
+Назначение:
+	•	хранить историю по складам
+	•	считать метрики
+	•	поддерживать периоды (день / неделя / произвольный диапазон)
+	•	поддерживать состояние «сейчас»
+	•	не нагружать OLTP-базу
+	•	обеспечивать архитектурную изоляцию
 
-⸻
-
-2. Концептуальная модель
-
-Карта = универсальный визуальный движок
-Метрика = декларативная сущность
-Период = глобальный контекст
-
-Радиус склада всегда кодирует выбранную метрику.
-
-Current-state (quantity) становится одной из метрик.
+Analytics не читает OLTP напрямую во время запроса пользователя.
 
 ⸻
 
-3. Data Layer
+2. Общая архитектура
 
-3.1 warehouse_fact (Long Model)
-
-Grain = день
-Хранит атомарное агрегированное дневное значение.
-
-warehouse_id
-date
-metric_id
-value
-last_event_time
-
-Ограничение:
-
-UNIQUE (warehouse_id, date, metric_id)
-
-Семантика:
-	•	одно значение на склад / дату / метрику
-	•	overwrite допустим
-	•	история версий не хранится
+Контейнеры
+	1.	project1-db (OLTP)
+	2.	analytics-db (PostgreSQL, отдельный volume)
+	3.	analytics-worker (микро-batch процесс)
 
 ⸻
 
-3.2 metrics_catalog
+3. Поток данных
 
-Метрика — first-class entity.
+Client → Project 1 ingest → project1-db
 
-metric_id (PK)
-name
-aggregation_type (sum | avg)
-unit
-scale_strategy_type (percentile)
-scale_percentile (int)
-enabled (boolean)
+analytics-worker (каждые ~60 секунд):
+	1.	читает новые события из project1 event_log
+	2.	трансформирует их
+	3.	пишет агрегаты в analytics-db
+	4.	обновляет watermark
 
-Свойства:
-	•	декларативная
-	•	расширяемая
-	•	хранится в БД
-	•	управляется вручную через SQL (на старте)
+Frontend → /api/analytics/map → analytics-db
 
-3.3 analytics_ingest_events
-
-Для строгой идемпотентности.
-
-event_id (PK)
-event_time
-metric_id
-warehouse_id
-date
-value
-processed_at
-
-Семантика:
-	•	duplicate → event_id уже существует
-	•	stale → event_time < last_event_time
-	•	applied → UPSERT реально обновил факт
-	•	rejected → логическая ошибка
-
-4. Write Layer
-
-Endpoint:
-
-POST /api/analytics/ingest
-
-
-Особенности:
-	•	строгая идемпотентность
-	•	UPSERT в warehouse_fact
-	•	stale detection
-	•	overwrite допустим
-	•	контракт честный (applied / duplicate / stale / rejected)
+OLTP и Analytics полностью изолированы.
 
 ⸻
 
-5. Read Layer
+4. Data Layer (analytics-db)
 
-Endpoint:
+4.1 Schema
 
-GET /api/analytics/map
-
-Параметры:
-	•	metric_id (обязательный)
-	•	start_date (обязательный)
-	•	end_date (optional → today если отсутствует)
-
-Период:
-
-start_date ≤ date ≤ end_date
-
-Агрегация:
-	•	SUM(value) или AVG(value)
-	•	dynamic
-	•	без materialized views
-
-Percentile:
-	•	рассчитывается через percentile_cont
-	•	per metric
-	•	динамически при каждом запросе
-
-Fallback:
-	•	если по складу нет данных → value = 0
-	•	склад всегда возвращается
-
-Ответ содержит:
-	•	warehouse_id
-	•	aggregated_value
-	•	percentile_value
-	•	metric_meta
-	•	period_used
-	•	last_updated
-
-Backend возвращает raw данные.
-Нормализацию радиуса выполняет frontend.
+CREATE SCHEMA IF NOT EXISTS analytics;
 
 ⸻
 
-6. Frontend Layer
+4.2 metrics_catalog
 
-Радиус:
-	•	зависит от выбранной метрики
-	•	адаптивный к периоду
-	•	percentile-based normalization
-	•	рассчитывается на frontend
+Назначение: декларативное управление метриками.
 
-Поведение:
-	•	смена метрики → период сохраняется
-	•	смена периода → радиусы пересчитываются
-	•	масштаб адаптивный
+Поля:
+	•	metric_id TEXT PRIMARY KEY (slug, regex ^[a-z0-9_]{1,50}$)
+	•	name TEXT NOT NULL
+	•	aggregation_type TEXT CHECK (sum | avg)
+	•	unit TEXT NOT NULL
+	•	scale_lower_percentile DOUBLE PRECISION [0,1]
+	•	scale_upper_percentile DOUBLE PRECISION [0,1]
+	•	enabled BOOLEAN DEFAULT TRUE
 
-⸻
-
-7. Масштабирование
-
-Scale Strategy:
-	•	type = percentile
-	•	percentile задаётся per metric
-	•	рассчитывается через percentile_cont
-
-Это предотвращает визуальный перекос из-за экстремумов.
+Инварианты:
+	•	lower < upper
+	•	slug enforced
 
 ⸻
 
-8. Инварианты Project №2
-	•	Long fact-table
-	•	Grain = день
-	•	overwrite допустим
-	•	строгая идемпотентность ingest
-	•	динамическая агрегация
-	•	percentile честный
-	•	радиус = единственный визуальный канал
-	•	адаптивный масштаб
-	•	метрики декларативные
-	•	каталог метрик хранится в БД
-	•	frontend универсальный визуальный движок
+4.3 warehouse_fact
+
+Grain:
+(warehouse_id, date, metric_id)
+
+Поля:
+	•	warehouse_id TEXT NOT NULL
+	•	date DATE NOT NULL
+	•	metric_id TEXT NOT NULL
+	•	value BIGINT CHECK (value >= 0)
+	•	last_event_time TIMESTAMPTZ NOT NULL
+
+PRIMARY KEY (warehouse_id, date, metric_id)
+
+FOREIGN KEY (metric_id)
+REFERENCES analytics.metrics_catalog(metric_id)
+ON DELETE RESTRICT
 
 ⸻
 
-9. Границы Project №2
-
-Project №2 НЕ включает:
-	•	производные формулы
-	•	ratio-метрики
-	•	произвольный SQL
-	•	materialized views
-	•	историю версий фактов
-	•	admin UI
-	•	BI / отчётность
-
-Это чистый аналитический слой визуального сравнения складов.
+Индексы
+	1.	Для агрегаций по периоду:
+(metric_id, date)
+	2.	Для выборки по складу:
+(warehouse_id)
+	3.	Для получения “сейчас”:
+(warehouse_id, metric_id, date DESC)
 
 ⸻
 
-10. Расширяемость
+4.4 analytics_ingest_events
 
-Будущие этапы могут добавить:
-	•	производные метрики
-	•	composite expressions
-	•	admin endpoint
-	•	materialized views
-	•	маршрутную аналитику
-	•	дополнительные визуальные каналы
+Назначение: идемпотентность.
 
-Но не в рамках текущего этапа.
+Поля:
+	•	event_id UUID PRIMARY KEY
+	•	event_time TIMESTAMPTZ NOT NULL
+	•	received_at TIMESTAMPTZ DEFAULT now()
 
 ⸻
 
-Итог
+5. Write Layer (analytics ingest)
 
-Project №2 — это:
+Валидации:
+	•	UUID event_id
+	•	запрет future date
+	•	проверка существования metric_id
+	•	проверка enabled
+	•	stale protection (event_time >= last_event_time)
+	•	value >= 0
 
-Declarative Metric Engine
-	•	Dynamic Aggregation
-	•	Percentile-Based Visual Normalization
-	•	Strict Idempotent Write Layer
+Статусы событий:
+	•	applied
+	•	stale
+	•	duplicate
+	•	rejected
 
-Архитектура зафиксирована.
+⸻
+
+6. Read Layer
+
+Endpoint: GET /api/analytics/map
+
+Поддержка режимов:
+	•	сейчас → MAX(date)
+	•	день → date = X
+	•	неделя → SUM по диапазону
+	•	период → SUM по диапазону
+
+Агрегация определяется aggregation_type (sum | avg).
+
+Всегда возвращаются все склады.
+
+⸻
+
+7. “Сейчас”
+
+Определяется как:
+MAX(date) для warehouse_id + metric_id
+
+Не используется CURRENT_DATE.
+
+⸻
+
+8. Event Model
+
+Project 1 содержит append-only event_log.
+
+analytics-worker читает:
+SELECT * FROM event_log
+WHERE id > last_processed_id
+ORDER BY id
+LIMIT N
+
+Это обеспечивает:
+	•	строгий порядок
+	•	корректный watermark
+	•	возможность replay
+
+⸻
+
+9. Принципы архитектуры
+	•	Полная изоляция OLTP и Analytics
+	•	Нет прямых join между БД
+	•	Нет runtime-зависимости
+	•	Почти real-time через микро-batch
+	•	Простая модель (без star-schema)
+	•	Возможность эволюции
+
+⸻
+
+10. Что сознательно НЕ делаем
+	•	Нет dimension-таблиц
+	•	Нет hourly фактов
+	•	Нет snapshot CSV
+	•	Нет Kafka
+	•	Нет двухфазных транзакций
+	•	Нет soft-delete
+
+⸻
+
+11. Итог
+
+Project №2 — это изолированный, event-driven, read-optimized аналитический слой с поддержкой:
+	•	нескольких метрик одновременно
+	•	разных периодов
+	•	состояния “сейчас”
+	•	высокой производительности
+	•	масштабируемости
+
+Архитектура заморожена.

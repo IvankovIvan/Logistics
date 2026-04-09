@@ -1,294 +1,203 @@
-# file: docs/project-2-final-architecture.md
-Project №2 — Final Architecture
-
-Declarative Warehouse Analytics Platform
+Project №2 — Analytics Layer (Final Architecture)
 
 ⸻
 
-1. Статус документа
+1. Цель
 
-Этот документ фиксирует окончательное архитектурное решение Project №2.
+Project №2 — это изолированный аналитический слой поверх Project №1 (OLTP).
 
-После утверждения:
-	•	архитектура считается замороженной
-	•	изменения возможны только через отдельное архитектурное решение
-	•	Project №1 остаётся неизменяемым
+Назначение:
+	•	хранить историю по складам
+	•	считать метрики
+	•	поддерживать периоды (день / неделя / произвольный диапазон)
+	•	поддерживать состояние «сейчас»
+	•	не нагружать OLTP-базу
+	•	обеспечивать архитектурную изоляцию
 
-⸻
-
-2. Принципиальная позиция
-
-Project №2:
-	•	не расширяет Project №1
-	•	не изменяет Project №1
-	•	строится поверх него
-	•	реализуется как отдельный доменный слой
-	•	использует ту же БД
-	•	использует отдельную schema analytics
+Analytics не читает OLTP напрямую во время запроса пользователя.
 
 ⸻
 
-3. Цель системы
+2. Общая архитектура
 
-Создать декларативную аналитическую платформу для складов, где:
-	•	метрика выбирается пользователем
-	•	период выбирается пользователем
-	•	радиус кодирует агрегированное значение
-	•	масштаб percentile-based
-	•	агрегация динамическая
-	•	метрики расширяемые без изменения фронта
+Контейнеры
+	1.	project1-db (OLTP)
+	2.	analytics-db (PostgreSQL, отдельный volume)
+	3.	analytics-worker (микро-batch процесс)
 
 ⸻
 
-4. Архитектурные инварианты
+3. Поток данных
 
-4.1 Разделение доменов
-public      → Project №1 (current-state)
-analytics   → Project №2 (analytics layer)
+Client → Project 1 ingest → project1-db
 
-Project №1 не зависит от Project №2.
+analytics-worker (каждые ~60 секунд):
+	1.	читает новые события из project1 event_log
+	2.	трансформирует их
+	3.	пишет агрегаты в analytics-db
+	4.	обновляет watermark
 
-Project №2 может читать данные из public.
+Frontend → /api/analytics/map → analytics-db
 
-⸻
-
-4.2 Grain модели
-
-warehouse_fact
-
-Grain:
-(warehouse_id, date, metric_id)
-
-Одна запись на склад, на день, на метрику.
+OLTP и Analytics полностью изолированы.
 
 ⸻
 
-4.3 Семантика overwrite
+4. Data Layer (analytics-db)
 
-Если приходит событие с тем же:
-warehouse_id
-date
-metric_id
+4.1 Schema
 
-И event_time ≥ last_event_time
-
-→ значение перезаписывается.
-
-Если event_time < last_event_time
-
-→ событие считается stale.
+CREATE SCHEMA IF NOT EXISTS analytics;
 
 ⸻
 
-5. Data Layer
-
-5.1 analytics.metrics_catalog
+4.2 metrics_catalog
 
 Назначение: декларативное управление метриками.
 
 Поля:
-	•	metric_id (PK)
-	•	name
-	•	aggregation_type (sum | avg)
-	•	unit
-	•	scale_lower_percentile
-	•	scale_upper_percentile
-	•	enabled (boolean)
+	•	metric_id TEXT PRIMARY KEY (slug, regex ^[a-z0-9_]{1,50}$)
+	•	name TEXT NOT NULL
+	•	aggregation_type TEXT CHECK (sum | avg)
+	•	unit TEXT NOT NULL
+	•	scale_lower_percentile DOUBLE PRECISION [0,1]
+	•	scale_upper_percentile DOUBLE PRECISION [0,1]
+	•	enabled BOOLEAN DEFAULT TRUE
 
 Инварианты:
-	•	0 ≤ lower < upper ≤ 1
-	•	metric_id обязателен для ingest
-	•	enabled влияет только на read-side
-
-Управление: вручную через SQL.
+	•	lower < upper
+	•	slug enforced
 
 ⸻
 
-5.2 analytics.warehouse_fact
+4.3 warehouse_fact
 
-Назначение: хранение атомарных дневных значений.
+Grain:
+(warehouse_id, date, metric_id)
 
 Поля:
-	•	warehouse_id (TEXT)
-	•	date (DATE)
-	•	metric_id (TEXT)
-	•	value (BIGINT)
-	•	last_event_time (TIMESTAMPTZ)
+	•	warehouse_id TEXT NOT NULL
+	•	date DATE NOT NULL
+	•	metric_id TEXT NOT NULL
+	•	value BIGINT CHECK (value >= 0)
+	•	last_event_time TIMESTAMPTZ NOT NULL
 
-Ограничения:
-	•	UNIQUE (warehouse_id, date, metric_id)
-	•	INDEX (metric_id, date)
+PRIMARY KEY (warehouse_id, date, metric_id)
 
-FK отсутствует (слабая связность).
+FOREIGN KEY (metric_id)
+REFERENCES analytics.metrics_catalog(metric_id)
+ON DELETE RESTRICT
 
 ⸻
 
-5.3 analytics.analytics_ingest_events
+Индексы
+	1.	Для агрегаций по периоду:
+(metric_id, date)
+	2.	Для выборки по складу:
+(warehouse_id)
+	3.	Для получения “сейчас”:
+(warehouse_id, metric_id, date DESC)
 
-Назначение: идемпотентность write-side.
+⸻
+
+4.4 analytics_ingest_events
+
+Назначение: идемпотентность.
 
 Поля:
-	•	event_id (PK)
-	•	event_time (TIMESTAMPTZ)
-	•	received_at (TIMESTAMPTZ default now())
-
-Поведение:
-	•	INSERT … ON CONFLICT DO NOTHING
-	•	duplicate определяется по rowcount
-	•	stale определяется через last_event_time
+	•	event_id UUID PRIMARY KEY
+	•	event_time TIMESTAMPTZ NOT NULL
+	•	received_at TIMESTAMPTZ DEFAULT now()
 
 ⸻
 
-6. Write Layer
+5. Write Layer (analytics ingest)
 
-Endpoint:
-POST /api/analytics/ingest
+Валидации:
+	•	UUID event_id
+	•	запрет future date
+	•	проверка существования metric_id
+	•	проверка enabled
+	•	stale protection (event_time >= last_event_time)
+	•	value >= 0
 
-Требования:
-	•	строгая идемпотентность
-	•	metric_id обязан существовать
-	•	overwrite по grain
-	•	stale detection
-	•	enabled не проверяется
-	•	атомарная транзакция на batch
-
-⸻
-
-7. Read Layer
-
-Endpoint:
-GET /api/analytics/map
-
-Параметры:
-	•	metric_id (required)
-	•	start_date (required)
-	•	end_date (optional, default = today)
+Статусы событий:
+	•	applied
+	•	stale
+	•	duplicate
+	•	rejected
 
 ⸻
 
-7.1 Семантика агрегации
-SUM(value)
+6. Read Layer
 
-Если aggregation_type = avg:
-SUM(value) / period_days
+Endpoint: GET /api/analytics/map
 
-где:
-period_days = end_date - start_date + 1
+Поддержка режимов:
+	•	сейчас → MAX(date)
+	•	день → date = X
+	•	неделя → SUM по диапазону
+	•	период → SUM по диапазону
 
+Агрегация определяется aggregation_type (sum | avg).
 
-⸻
-
-7.2 Покрытие складов
-
-Всегда возвращаются все склады из:
-public.warehouses_current
-
-LEFT JOIN с warehouse_fact.
-
-Если данных нет:
-
-value = 0
-
+Всегда возвращаются все склады.
 
 ⸻
 
-7.3 Percentile scaling
+7. “Сейчас”
 
-Percentile считается:
-	•	только по складам, где value > 0
-	•	на агрегированных значениях
+Определяется как:
+MAX(date) для warehouse_id + metric_id
 
-Используется:
-percentile_cont(lower)
-percentile_cont(upper)
-
+Не используется CURRENT_DATE.
 
 ⸻
 
-7.4 Fallback стратегия
+8. Event Model
 
-Если:
-	•	count(value > 0) < 2
-или
-	•	lower == upper
+Project 1 содержит append-only event_log.
 
-Тогда:
+analytics-worker читает:
+SELECT * FROM event_log
+WHERE id > last_processed_id
+ORDER BY id
+LIMIT N
 
-lower = min(value > 0)
-upper = max(value > 0)
-
-Если min == max:
-	•	используется фиксированный диапазон
-	•	нулевые склады остаются нулевыми
-
-⸻
-
-8. Frontend инварианты
-
-Frontend:
-	•	получает raw values
-	•	получает lower_percentile_value
-	•	получает upper_percentile_value
-	•	нормализует радиус
-	•	не агрегирует
-	•	не считает percentile
-	•	не вычисляет формулы
-
-Смена метрики не сбрасывает период.
+Это обеспечивает:
+	•	строгий порядок
+	•	корректный watermark
+	•	возможность replay
 
 ⸻
 
-9. Запрещено в Project №2
-	•	materialized views
-	•	производные формулы
-	•	SQL expression engine
-	•	BI-отчёты
-	•	history versioning
-	•	admin UI
-	•	изменение /api/map
+9. Принципы архитектуры
+	•	Полная изоляция OLTP и Analytics
+	•	Нет прямых join между БД
+	•	Нет runtime-зависимости
+	•	Почти real-time через микро-batch
+	•	Простая модель (без star-schema)
+	•	Возможность эволюции
 
 ⸻
 
-10. Инициализация БД
-
-Analytics создаётся через:
-
-db/init_analytics.sql
-
-Выполняется при первичной инициализации БД.
-
-Schema:
-
-CREATE SCHEMA analytics;
-
-Project №1 (db/init.sql) не изменяется.
+10. Что сознательно НЕ делаем
+	•	Нет dimension-таблиц
+	•	Нет hourly фактов
+	•	Нет snapshot CSV
+	•	Нет Kafka
+	•	Нет двухфазных транзакций
+	•	Нет soft-delete
 
 ⸻
 
-11. Эволюция в будущем
+11. Итог
 
-Допустимые будущие расширения:
-	•	добавление processed_at
-	•	добавление audit статусов
-	•	NUMERIC вместо BIGINT
-	•	отдельная БД
-	•	admin endpoint для metrics_catalog
-
-Эти изменения не должны нарушать текущие инварианты.
-
-⸻
-
-12. Итоговое состояние
-
-Project №2 является:
-	•	декларативной
-	•	расширяемой
-	•	масштабируемой
-	•	изолированной
-	•	percentile-based
-	•	динамической
-	•	совместимой с Project №1
+Project №2 — это изолированный, event-driven, read-optimized аналитический слой с поддержкой:
+	•	нескольких метрик одновременно
+	•	разных периодов
+	•	состояния “сейчас”
+	•	высокой производительности
+	•	масштабируемости
 
 Архитектура заморожена.
-
-
