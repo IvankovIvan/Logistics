@@ -134,7 +134,35 @@ CREATE INDEX IF NOT EXISTS idx_current_batch_wh_status
     ON analytics.current_batch_state (warehouse_id, status_id);
 
 -- -----------------------------------------------------
--- 6) Worker state
+-- 6) Reference data: status dictionaries
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS analytics.status_dict (
+    status_id INT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL
+);
+
+COMMENT ON TABLE analytics.status_dict IS
+    'Reference data: canonical status dictionary for analytics events.';
+
+COMMENT ON COLUMN analytics.status_dict.code IS
+    'Stable status code used by ingest/events integration.';
+
+CREATE TABLE IF NOT EXISTS analytics.status_reason (
+    status_reason_id INT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    is_tracking_finished BOOLEAN NOT NULL
+);
+
+COMMENT ON TABLE analytics.status_reason IS
+    'Reference data: status reasons with tracking-finality flag.';
+
+COMMENT ON COLUMN analytics.status_reason.is_tracking_finished IS
+    'TRUE means batch tracking is finished and must be removed from snapshot.';
+
+-- -----------------------------------------------------
+-- 7) Worker state
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics.worker_state (
     worker_name TEXT PRIMARY KEY,
@@ -145,16 +173,9 @@ COMMENT ON TABLE analytics.worker_state IS
     'Stores worker watermark for sequential event processing.';
 
 -- -----------------------------------------------------
--- 7) Worker state initialization
+-- 8) Worker state initialization
 -- -----------------------------------------------------
 INSERT INTO analytics.worker_state (worker_name, last_processed_event_id)
 VALUES ('analytics_worker', 0)
 ON CONFLICT (worker_name) DO NOTHING;
 
-CREATE TABLE IF NOT EXISTS analytics.status_reason (
-    status_reason_id INT PRIMARY KEY,
-    is_tracking_finished BOOLEAN NOT NULL
-);
-
-COMMENT ON TABLE analytics.status_reason IS
-    'Stores status reasons and their tracking completion status.';

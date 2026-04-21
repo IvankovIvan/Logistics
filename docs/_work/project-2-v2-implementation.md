@@ -216,7 +216,9 @@ analytics.worker_state
 * batch processing (worker)
 * JOIN вместо N+1
 * partitioning event table
-* batch ingest (см. раздел 10)
+* batch ingest
+* Python validation вместо SQL
+* batch создание партиций
 
 ---
 
@@ -243,6 +245,11 @@ events →
 [now() - 6 months, now() + 1 month]
 ```
 
+Особенности:
+
+* выполняется в UTC
+* исключает невалидные события до обращения к БД
+
 Если вне диапазона:
 
 → событие получает статус `rejected`
@@ -255,7 +262,14 @@ events →
 
 * по месяцам
 * через функцию `analytics.create_month_partition()`
-* batch-режим (1 раз на месяц, не на событие)
+* batch-режим (1 раз на месяц)
+
+Дополнительно:
+
+* поддерживается окно данных:
+
+  * прошлое: -6 месяцев
+  * будущее: +1 месяц
 
 Свойства:
 
@@ -362,17 +376,66 @@ analytics-worker (docker)
 
 ---
 
-## 14. Ограничения
+## 14. Reference Data (справочники)
+
+### 14.1 status_dict
+
+```
+analytics.status_dict
+```
+
+Поля:
+
+* `status_id INT PRIMARY KEY`
+* `code TEXT UNIQUE`
+* `description TEXT`
+
+Назначение:
+
+* хранит бизнес-статусы (например: IN_TRANSIT, STORED)
+* используется для отображения и API
+
+---
+
+### 14.2 status_reason
+
+```
+analytics.status_reason
+```
+
+Поля:
+
+* `status_reason_id INT PRIMARY KEY`
+* `code TEXT UNIQUE`
+* `description TEXT`
+* `is_tracking_finished BOOLEAN`
+
+Назначение:
+
+* определяет причину статуса
+* определяет финальность партии
+
+---
+
+⚠️ Особенности:
+
+* FK не используются (архитектурное решение)
+* целостность контролируется на уровне ingest
+
+---
+
+## 15. Ограничения
 
 1. Late events не меняют snapshot
 2. Требуется корректный `status_reason`
 3. Только один worker
 4. Rebuild может быть дорогим
 5. Batch insert может fallback'иться при ошибках
+6. История ограничена окном партиций (-6 / +1 месяц)
 
 ---
 
-## 15. Итог
+## 16. Итог
 
 Система реализует:
 
@@ -384,7 +447,7 @@ analytics-worker (docker)
 
 ---
 
-## 16. Статус
+## 17. Статус
 
 | Компонент         | Статус |
 | ----------------- | ------ |
@@ -395,6 +458,8 @@ analytics-worker (docker)
 | Rebuild           | ✔      |
 | Consistency Check | ✔      |
 | Batch Ingest      | ✔      |
+| Partitions        | ✔      |
+| Reference Data    | ✔      |
 
 ---
 
