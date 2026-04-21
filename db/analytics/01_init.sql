@@ -150,3 +150,11 @@ COMMENT ON TABLE analytics.worker_state IS
 INSERT INTO analytics.worker_state (worker_name, last_processed_event_id)
 VALUES ('analytics_worker', 0)
 ON CONFLICT (worker_name) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS analytics.status_reason (
+    status_reason_id INT PRIMARY KEY,
+    is_tracking_finished BOOLEAN NOT NULL
+);
+
+COMMENT ON TABLE analytics.status_reason IS
+    'Stores status reasons and their tracking completion status.';
