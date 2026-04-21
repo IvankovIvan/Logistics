@@ -39,3 +39,16 @@ VALUES (
 )
 ON CONFLICT (operation_id, event_time) DO NOTHING;
 """
+
+
+CHECK_EVENT_TIME_RANGE = """
+SELECT (
+    %(event_time)s >= now() - interval '6 months'
+    AND %(event_time)s <= now() + interval '1 month'
+) AS is_in_range;
+"""
+
+
+CREATE_MONTH_PARTITION = """
+SELECT analytics.create_month_partition(%(event_time)s) AS created_partition;
+"""

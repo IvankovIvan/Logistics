@@ -55,6 +55,43 @@ COMMENT ON COLUMN analytics.inventory_status_events.operation_id IS
     'Business operation identifier used for idempotent worker writes.';
 
 -- -----------------------------------------------------
+-- 2.1) Partition management helper
+-- -----------------------------------------------------
+CREATE OR REPLACE FUNCTION analytics.create_month_partition(
+    target_timestamp TIMESTAMPTZ
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    partition_start TIMESTAMPTZ := date_trunc('month', target_timestamp);
+    partition_end TIMESTAMPTZ := partition_start + INTERVAL '1 month';
+    partition_name TEXT := format(
+        'inventory_status_events_%s',
+        to_char(partition_start, 'YYYY_MM')
+    );
+    qualified_name TEXT := format('analytics.%I', partition_name);
+    partition_exists BOOLEAN := to_regclass(qualified_name) IS NOT NULL;
+BEGIN
+    IF NOT partition_exists THEN
+        EXECUTE format(
+            'CREATE TABLE IF NOT EXISTS analytics.%I PARTITION OF analytics.inventory_status_events FOR VALUES FROM (%L) TO (%L)',
+            partition_name,
+            partition_start,
+            partition_end
+        );
+
+        RETURN partition_name;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+COMMENT ON FUNCTION analytics.create_month_partition(TIMESTAMPTZ) IS
+    'Creates monthly partition for analytics.inventory_status_events if missing. Returns partition name only when newly created.';
+
+-- -----------------------------------------------------
 -- 3) Example partition
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics.inventory_status_events_2026_01
