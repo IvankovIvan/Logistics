@@ -151,6 +151,37 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ---------------------------------------------------
+  # 6️⃣ Analytics Worker (event processing)
+  # ---------------------------------------------------
+  analytics-worker:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    command: python -m app.workers.analytics_worker
+    environment:
+      PYTHONPATH: /
+
+      # --- Analytics DB ---
+      ANALYTICS_POSTGRES_HOST: analytics-db
+      ANALYTICS_POSTGRES_PORT: 5432
+      ANALYTICS_POSTGRES_DB: analytics
+      ANALYTICS_POSTGRES_USER: analytics
+      ANALYTICS_POSTGRES_PASSWORD: analytics
+
+      # --- Worker config ---
+      ANALYTICS_WORKER_BATCH_SIZE: 100
+      ANALYTICS_WORKER_SLEEP_SECONDS: 5
+
+    depends_on:
+      analytics-db:
+        condition: service_started
+
+    restart: unless-stopped
+
 # ---------------------------------------------------
 # Volumes (persistency)
 # ---------------------------------------------------
