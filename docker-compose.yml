@@ -118,6 +118,22 @@ services:
   # ---------------------------------------------------
   # 5️⃣ Redis (будущий broker / backend для Celery)
   # ---------------------------------------------------
+  analytics-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+    volumes:
+      - analytics_data:/var/lib/postgresql/data
+      - ./db/analytics:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
+  # ---------------------------------------------------
+  # 5️⃣ Redis (будущий broker / backend для Celery)
+  # ---------------------------------------------------
   redis:
     image: redis:7-alpine
                                      # Лёгкий Redis, без конфигов
@@ -142,3 +158,4 @@ volumes:
   postgres_data:
     # Хранилище данных PostgreSQL
     # Удаляется только вручную (docker volume rm)
+  analytics_data:
