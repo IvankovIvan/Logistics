@@ -238,6 +238,31 @@ COMMENT ON COLUMN analytics.cities.city_id IS
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cities_name_unique
     ON analytics.cities (lower(name));
 
+CREATE TABLE IF NOT EXISTS analytics.warehouse_types (
+    warehouse_type_id INT PRIMARY KEY,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL
+);
+
+COMMENT ON TABLE analytics.warehouse_types IS
+    'Reference data: dictionary of warehouse types for Project #3 analytics warehouse master data.';
+
+COMMENT ON COLUMN analytics.warehouse_types.warehouse_type_id IS
+    'Stable identifier of warehouse type used in analytics.warehouses.';
+
+COMMENT ON COLUMN analytics.warehouse_types.code IS
+    'Machine-readable unique type code for integrations and business logic.';
+
+COMMENT ON COLUMN analytics.warehouse_types.name IS
+    'Human-readable warehouse type name for UI and reports.';
+
+INSERT INTO analytics.warehouse_types (warehouse_type_id, code, name) VALUES
+    (1, 'LOGISTICS_CENTER', 'Логистический центр'),
+    (2, 'EXPEDITOR', 'Экспедитор'),
+    (3, 'STORAGE', 'Склад хранения'),
+    (4, 'TRANSIT', 'Транзитный склад')
+ON CONFLICT (warehouse_type_id) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS analytics.warehouses (
     warehouse_id BIGINT PRIMARY KEY,
     name TEXT NOT NULL,
