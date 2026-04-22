@@ -16,7 +16,13 @@ export function toWarehousesGeoJson(
   warehouses: MapResponse["warehouses"]
 ): GeoJSON.FeatureCollection<
   GeoJSON.Point,
-  { id: string; name: string; status: string; total: number }
+  {
+    id: string;
+    name: string;
+    status: string;
+    total: number;
+    status_text: string;
+  }
 > {
   return {
     type: "FeatureCollection",
@@ -28,6 +34,9 @@ export function toWarehousesGeoJson(
         name: w.name,
         status: w.status,
         total: w.metrics.total,
+        status_text: w.metrics.by_status
+          .map((s) => `${s.status_id}:${s.quantity}`)
+          .join(","),
       },
     })),
   };

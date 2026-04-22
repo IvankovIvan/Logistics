@@ -12,7 +12,7 @@
 // - Facade НЕ знает про UI и localStorage
 // - Facade НЕ меняет GeoJSON, только управляет MapLibre
 
-import type { Map, FilterSpecification } from "maplibre-gl";
+import maplibregl, { type Map, type FilterSpecification } from "maplibre-gl";
 
 import { addMapSources, updateRouteSource } from "../sources/map.sources";
 import { addWarehouseLayers } from "../layers/warehouses.layers";
@@ -99,6 +99,27 @@ export class MapFacade {
 
     addRouteLayers(this.map);
     addWarehouseLayers(this.map);
+
+    this.map.on("click", "warehouses-layer", (e) => {
+      const f = e.features?.[0];
+      if (!f) return;
+
+      const props = f.properties ?? {};
+      const formattedStatus = String(props.status_text ?? "нет данных")
+        .split(",")
+        .map((s) => s.replace(":", ": "))
+        .join("<br>");
+
+      const [lon, lat] = (f.geometry as GeoJSON.Point).coordinates;
+
+      new maplibregl.Popup()
+        .setLngLat([lon, lat])
+        .setHTML(`<b>Склад:</b> ${String(props.name ?? "")}<br>
+      <b>Всего:</b> ${String(props.total ?? 0)}<br><br>
+      <b>Статусы:</b><br>
+      ${formattedStatus}`)
+        .addTo(this.map);
+    });
     
 
     // Route hover enabled (Project 1.3).
