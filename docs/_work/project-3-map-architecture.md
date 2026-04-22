@@ -1,5 +1,5 @@
 # /opt/Logistics/docs/_work/project-3-map-architecture.md
-# 📘 Project №3 — Analytics Map Architecture (V1 Updated)
+# 📘 Project №3 — Analytics Map Architecture (V1 Final)
 
 ---
 
@@ -19,7 +19,7 @@ Project №3 — визуализация аналитических данны�
 ## 2. Общая архитектура
 
 ```
-analytics.current_batch_state → aggregation → /api/analytics/map → frontend
+analytics.current_batch_state → aggregation → map_builder → /api/analytics/map → frontend
 ```
 
 Дополнительно:
@@ -41,8 +41,10 @@ analytics.current_batch_state
 Хранит:
 * активные партии
 * статус (`status_id`)
-* причину (`status_reason_id`)
 * количество (`quantity`)
+
+⚠️ В V1:
+* `status_reason_id` НЕ используется в карте
 
 ---
 
@@ -76,27 +78,23 @@ analytics.warehouses
 
 ```
 analytics.cities
+analytics.warehouse_types
 ```
-
-Поля:
-
-* `city_id`
-* `name`
 
 Назначение:
 
-* нормализация географии
-* исключение дублирования строк
-* основа для фильтрации и агрегации
+* нормализация данных
+* исключение дублирования
+* основа для фильтрации и отображения
 
 ---
 
 ## 4. Логика агрегации
 
-Агрегация выполняется на лету (без промежуточного snapshot):
+Агрегация выполняется на лету:
 
 ```
-GROUP BY warehouse_id, status_id, status_reason_id
+GROUP BY warehouse_id, status_id
 ```
 
 Источник:
@@ -107,9 +105,11 @@ analytics.current_batch_state
 
 Результат:
 
-* `total_quantity` — сумма по складу
-* `by_status` — распределение по статусам
-* `by_reason` — распределение по причинам
+* `total_quantity` — сумма по складу и статусу
+* `warehouse_total_quantity` — общий объём по складу
+
+⚠️ В V1:
+* `by_reason` отсутствует
 
 ---
 
@@ -125,9 +125,9 @@ ON warehouse_id
 
 Особенности:
 
-* используются ВСЕ склады (LEFT JOIN)
-* склады без данных получают `0`
-* это обеспечивает полную карту сети
+* используются ВСЕ склады
+* склады без данных получают `total = 0`
+* реализовано на уровне Python (map_builder)
 
 ---
 
@@ -141,9 +141,9 @@ GET /api/analytics/map
 
 Особенности:
 
-* один endpoint
+* новый endpoint (старый /api/map не изменяется)
 * один запрос
-* возвращает все данные для всех слоёв
+* полностью основан на analytics
 
 ---
 
@@ -151,20 +151,22 @@ GET /api/analytics/map
 
 ```
 {
-  "warehouse_id": 1,
-  "lat": 59.93,
-  "lon": 30.31,
-  "metrics": {
-    "total": 120,
-    "by_status": [
-      { "status_id": 1, "quantity": 50 },
-      { "status_id": 2, "quantity": 70 }
-    ],
-    "by_reason": [
-      { "reason_id": 1, "quantity": 40 },
-      { "reason_id": 5, "quantity": 80 }
-    ]
-  }
+  "warehouses": [
+    {
+      "warehouse_id": 1,
+      "name": "Склад",
+      "lat": 59.93,
+      "lon": 30.31,
+      "metrics": {
+        "total": 120,
+        "by_status": [
+          { "status_id": 1, "quantity": 50 },
+          { "status_id": 2, "quantity": 70 }
+        ]
+      }
+    }
+  ],
+  "routes": []
 }
 ```
 
@@ -174,20 +176,13 @@ GET /api/analytics/map
 
 Карта отображает:
 
-* точки складов (warehouse-level)
-* сложную структуру данных в каждой точке
+* точки складов
+* агрегированные метрики
 
-Поддерживаются слои:
+Слои:
 
 * общий объём (`total`)
 * по статусам (`by_status`)
-* по причинам (`by_reason`)
-
-Особенности:
-
-* переключение слоёв происходит на фронте
-* данные загружаются одним запросом
-* используется GeoJSON на фронте
 
 ---
 
@@ -195,39 +190,37 @@ GET /api/analytics/map
 
 Склады без активных партий:
 
-* отображаются (через LEFT JOIN)
-* получают `total = 0`
-* визуализируются отдельно (например, серым)
+* отображаются
+* имеют `total = 0`
+* `by_status = []`
 
 ---
 
 ## 10. Ограничения
 
-1. Агрегация выполняется на лету (без кеша)
-2. Нет маршрутов (будут добавлены в следующих версиях)
-3. Возможны ограничения по производительности при росте данных
-4. Нет materialized слоя (warehouse snapshot)
+1. Нет `by_reason` (будет в V2)
+2. Нет маршрутов (будут позже)
+3. Агрегация выполняется на лету
+4. Нет кеша
 
 ---
 
 ## 11. Инварианты
 
-1. Источник данных — только analytics
-2. Нет runtime зависимости от OLTP
-3. `current_batch_state` — источник фактов
-4. `analytics.warehouses` — источник географии
-5. `warehouse_id` — стабильный и неизменяемый
-6. Все склады должны отображаться на карте
-7. Все слои используют один и тот же snapshot
+1. Только analytics — источник данных
+2. Нет зависимости от OLTP
+3. `current_batch_state` — факты
+4. `warehouses` — география
+5. Все склады отображаются
 
 ---
 
 ## 12. Trade-offs
 
-1. Вычисления на лету → проще архитектура, но выше нагрузка
-2. Нет PostGIS → проще модель, но меньше гео-возможностей
-3. Один API → проще фронт, но больше payload
-4. Нет маршрутов → снижена сложность V1
+1. Простота > гибкость (V1)
+2. Python сборка > SQL JSON
+3. Нет PostGIS
+4. Один endpoint
 
 ---
 
@@ -235,11 +228,10 @@ GET /api/analytics/map
 
 Project №3 реализует:
 
-* полностью изолированную аналитическую карту
-* агрегированные метрики из event-driven системы
-* независимость от OLTP
-* расширяемую архитектуру для будущих слоёв (routes, heatmaps)
+* полностью независимую карту
+* агрегированные метрики
+* рабочий production pipeline
 
 ---
 
-Архитектура Project №3 зафиксирована (V1 Updated).
+Архитектура Project №3 зафиксирована (V1 Final).

@@ -1,7 +1,14 @@
 # app/main.py
 from fastapi import FastAPI
 
-from routers import shipments_router, warehouses_router, map_router, ingest_router, analytics_ingest_router
+from routers import (
+    analytics_ingest_router,
+    analytics_map_router,
+    ingest_router,
+    map_router,
+    shipments_router,
+    warehouses_router,
+)
 
 app = FastAPI(
     title="Logistics API",
@@ -31,10 +38,12 @@ def health():
     return {"status": "ok"}
 
 # ⬇️ ВАЖНО:
-# map_router, ingest_router и analytics_ingest_router УЖЕ имеют prefix="/api"
+# map_router, ingest_router, analytics_ingest_router и analytics_map_router
+# УЖЕ имеют prefix="/api"
 app.include_router(map_router)
 app.include_router(ingest_router)
 app.include_router(analytics_ingest_router)
+app.include_router(analytics_map_router)
 
 # ⬇️ warehouses / shipments приводим к /api
 app.include_router(warehouses_router, prefix="/api")

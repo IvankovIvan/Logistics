@@ -9,6 +9,7 @@ from .shipments import router as shipments_router
 from .map import router as map_router
 from .ingest import router as ingest_router
 from .analytics_ingest import router as analytics_ingest_router
+from .analytics_map import router as analytics_map_router
 
 __all__ = [
     "warehouses_router",
@@ -16,4 +17,5 @@ __all__ = [
     "map_router",
     "ingest_router",
     "analytics_ingest_router",
+    "analytics_map_router",
 ]
