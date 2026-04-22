@@ -179,3 +179,43 @@ INSERT INTO analytics.worker_state (worker_name, last_processed_event_id)
 VALUES ('analytics_worker', 0)
 ON CONFLICT (worker_name) DO NOTHING;
 
+INSERT INTO analytics.status_dict (status_id, code, description)
+VALUES
+
+   (-1, 'DELETED', 'Удалено'), 
+   (1, 'RECEIPT', 'Принято'),
+   (2, 'PACKAGED', 'Упаковано'),
+   (3, 'SHIPPED', 'Отгружено'),
+   (4, 'RETURNED', 'Возвращено'),
+   (5, 'DELIVERED', 'Доставлено'),
+   (6, 'IN_TRANSIT', 'В пути')
+ON CONFLICT (status_id) DO NOTHING;
+
+INSERT INTO analytics.status_reason (
+    status_reason_id,
+    code,
+    description,
+    is_tracking_finished
+)
+VALUES
+    (-1, 'DELETED', 'Удалено', true),
+    (0, 'UNKNOWN', 'Неизвестно', false),
+    (1, 'RECEIPT_FIRST', 'Принято первично', false),
+    (2, 'RECEIPT_SECOND', 'Принято вторично', false),
+    (3, 'RECEIPT_NOTHING', 'Принято неизвестно', false),
+    (4, 'PACKAGE_TERMINAL', 'Упаковано терминалом', false),
+    (5, 'PACKAGE_OLD_APP', 'Упаковано в старом приложении', false),
+    (6, 'PACKAGE_NEW_APP', 'Упаковано в новом приложении', false),
+    (7, 'PACKAGE_NOTHING', 'Упаковано неизвестно', false),
+    (8, 'SHIPPED_CLIENT', 'Отгружено клиенту', false),
+    (9, 'SHIPPED_WAREHOUSE', 'Отгружено на склад', false),
+    (10, 'SHIPPED_EXPEDITION', 'Отгружено экспедитору', false),
+    (11, 'DELIVERED_CLIENT', 'Доставлено клиенту', true),
+    (12, 'DELIVERED_WAREHOUSE', 'Доставлено на склад', false),
+    (13, 'DELIVERED_EXPEDITION', 'Доставлено экспедитору', false),
+    (14, 'RETURNED_WAREHOUSE', 'Возвращено на склад', false),
+    (15, 'IN_TRANSIT_CLIENT', 'В пути клиенту', false),
+    (16, 'IN_TRANSIT_WAREHOUSE', 'В пути на склад', false),
+    (17, 'IN_TRANSIT_EXPEDITION', 'В пути экспедитору', false),
+    (18, 'MOVED', 'Перемещение', false)
+ON CONFLICT (status_reason_id) DO NOTHING;
