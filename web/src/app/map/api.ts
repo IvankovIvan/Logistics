@@ -14,6 +14,13 @@ export type MapWarehouse = {
   lon: number;
   lat: number;
   quantity: number;
+  metrics: {
+    total: number;
+    by_status: Array<{
+      status_id: number;
+      quantity: number;
+    }>;
+  };
 };
 
 export type MapRoute = {

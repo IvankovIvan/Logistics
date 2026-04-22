@@ -67,7 +67,7 @@ export function buildWarehouseRadiusExpression(): ExpressionSpecification {
               "-",
               [
                 "/",
-                ["ln", ["max", 1, ["get", "quantity"]]],
+                ["ln", ["max", 1, ["get", "total"]]],
                 ["ln", 10],
               ],
               2, // log10(100)
@@ -148,7 +148,7 @@ export function addWarehouseLayers(map: Map): void {
           "\n",
           {},
 
-          ["get", "quantity"],
+          ["get", "total"],
           { "font-scale": 0.95 }
         ]
       ],
