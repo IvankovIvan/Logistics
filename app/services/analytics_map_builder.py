@@ -43,6 +43,7 @@ class AnalyticsMapWarehouse(TypedDict):
     name: str
     lat: float
     lon: float
+    quantity: int
     metrics: WarehouseMetrics
 
 
@@ -179,6 +180,7 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
                 "name": name,
                 "lat": lat,
                 "lon": lon,
+                "quantity": metrics["total"],
                 "metrics": metrics,
             }
         )

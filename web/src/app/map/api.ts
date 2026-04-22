@@ -55,8 +55,9 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 
 /**
  * Данные для карты одним запросом.
- * Endpoint есть в бекенде: /api/map
+ * Endpoint есть в бекенде: /api/analytics/map
  */
 export async function fetchMap(signal?: AbortSignal): Promise<MapResponse> {
-  return fetchJson<MapResponse>("/api/map", signal);
+  //return fetchJson<MapResponse>("/api/map", signal);
+  return fetchJson<MapResponse>("/api/analytics/map", signal);
 }

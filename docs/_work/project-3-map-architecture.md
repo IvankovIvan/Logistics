@@ -157,6 +157,9 @@ GET /api/analytics/map
       "name": "Склад",
       "lat": 59.93,
       "lon": 30.31,
+
+      "quantity": 120,
+
       "metrics": {
         "total": 120,
         "by_status": [
@@ -169,6 +172,12 @@ GET /api/analytics/map
   "routes": []
 }
 ```
+
+Особенности:
+
+* `quantity` = `metrics.total`
+* используется фронтом для визуализации (радиус)
+* добавлено для backward compatibility
 
 ---
 
@@ -184,6 +193,9 @@ GET /api/analytics/map
 * общий объём (`total`)
 * по статусам (`by_status`)
 
+⚠️ В V1:
+* используется `quantity` для radius (наследие Project №1)
+
 ---
 
 ## 9. Пустые склады
@@ -192,6 +204,7 @@ GET /api/analytics/map
 
 * отображаются
 * имеют `total = 0`
+* имеют `quantity = 0`
 * `by_status = []`
 
 ---
@@ -202,6 +215,7 @@ GET /api/analytics/map
 2. Нет маршрутов (будут позже)
 3. Агрегация выполняется на лету
 4. Нет кеша
+5. Есть временная зависимость от старого поля `quantity`
 
 ---
 
@@ -212,6 +226,7 @@ GET /api/analytics/map
 3. `current_batch_state` — факты
 4. `warehouses` — география
 5. Все склады отображаются
+6. `quantity = metrics.total`
 
 ---
 
@@ -221,6 +236,7 @@ GET /api/analytics/map
 2. Python сборка > SQL JSON
 3. Нет PostGIS
 4. Один endpoint
+5. Временный слой совместимости (quantity)
 
 ---
 
@@ -231,6 +247,7 @@ Project №3 реализует:
 * полностью независимую карту
 * агрегированные метрики
 * рабочий production pipeline
+* совместимость со старым фронтом
 
 ---
 
