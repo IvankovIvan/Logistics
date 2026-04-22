@@ -219,3 +219,106 @@ VALUES
     (17, 'IN_TRANSIT_EXPEDITION', 'В пути экспедитору', false),
     (18, 'MOVED', 'Перемещение', false)
 ON CONFLICT (status_reason_id) DO NOTHING;
+
+-- -----------------------------------------------------
+-- 9) Project #3 reference layer: cities + warehouses
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS analytics.cities (
+    city_id BIGINT PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+COMMENT ON TABLE analytics.cities IS
+    'Reference data: city dictionary for analytics warehouse master table.';
+
+COMMENT ON COLUMN analytics.cities.city_id IS
+    'Stable city identifier used by analytics.warehouses.';
+
+-- Защита от дублей названий города без учёта регистра.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cities_name_unique
+    ON analytics.cities (lower(name));
+
+CREATE TABLE IF NOT EXISTS analytics.warehouses (
+    warehouse_id BIGINT PRIMARY KEY,
+    name TEXT NOT NULL,
+    city_id BIGINT NOT NULL,
+    warehouse_type_id INT NOT NULL,
+    lat DOUBLE PRECISION NOT NULL,
+    lon DOUBLE PRECISION NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE analytics.warehouses IS
+    'Master table for warehouses in analytics; source for map in Project #3.';
+
+COMMENT ON COLUMN analytics.warehouses.warehouse_id IS
+    'Warehouse identifier aligned 1:1 with OLTP warehouse id.';
+
+COMMENT ON COLUMN analytics.warehouses.city_id IS
+    'City identifier from analytics.cities reference data.';
+
+COMMENT ON COLUMN analytics.warehouses.warehouse_type_id IS
+    'Reference to warehouse type dictionary (external or future analytics table).';
+
+COMMENT ON COLUMN analytics.warehouses.lat IS
+    'Latitude in WGS84 stored as plain numeric value (no PostGIS in analytics).';
+
+COMMENT ON COLUMN analytics.warehouses.lon IS
+    'Longitude in WGS84 stored as plain numeric value (no PostGIS in analytics).';
+
+CREATE INDEX IF NOT EXISTS idx_warehouses_city
+    ON analytics.warehouses (city_id);
+
+CREATE INDEX IF NOT EXISTS idx_warehouses_type
+    ON analytics.warehouses (warehouse_type_id);
+
+-- Диапазоны координат для защиты качества данных в master-таблице складов.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_lat_range'
+          AND conrelid = 'analytics.warehouses'::regclass
+    ) THEN
+        ALTER TABLE analytics.warehouses
+        ADD CONSTRAINT chk_lat_range
+        CHECK (lat BETWEEN -90 AND 90);
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_lon_range'
+          AND conrelid = 'analytics.warehouses'::regclass
+    ) THEN
+        ALTER TABLE analytics.warehouses
+        ADD CONSTRAINT chk_lon_range
+        CHECK (lon BETWEEN -180 AND 180);
+    END IF;
+END;
+$$;
+
+-- Автоматически обновляем updated_at при любом UPDATE строки склада.
+CREATE OR REPLACE FUNCTION analytics.touch_warehouses_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_touch_warehouses_updated_at
+ON analytics.warehouses;
+
+CREATE TRIGGER trg_touch_warehouses_updated_at
+BEFORE UPDATE ON analytics.warehouses
+FOR EACH ROW
+EXECUTE FUNCTION analytics.touch_warehouses_updated_at();
