@@ -1,5 +1,5 @@
 # /opt/Logistics/docs/_work/project-3-map-architecture.md
-# 📘 Project №3 — Analytics Map Architecture (V1 Final)
+# 📘 Project №3 — Analytics Map Architecture (V1 Final, Clean)
 
 ---
 
@@ -58,19 +58,18 @@ analytics.warehouses
 
 Поля:
 
-* `warehouse_id` — стабильный идентификатор (совпадает с OLTP)
+* `warehouse_id` — стабильный идентификатор
 * `name` — название склада
 * `city_id` — ссылка на справочник городов
 * `warehouse_type_id` — тип склада
-* `lat`, `lon` — координаты (WGS84, без PostGIS)
+* `lat`, `lon` — координаты (WGS84)
 * `created_at`, `updated_at` — технические поля
 
 Особенности:
 
 * не используется PostGIS
-* хранится только `lat/lon`
 * полностью независима от OLTP
-* используется как единственный источник географии
+* единственный источник географии
 
 ---
 
@@ -85,13 +84,11 @@ analytics.warehouse_types
 
 * нормализация данных
 * исключение дублирования
-* основа для фильтрации и отображения
+* фильтрация и аналитика
 
 ---
 
 ## 4. Логика агрегации
-
-Агрегация выполняется на лету:
 
 ```
 GROUP BY warehouse_id, status_id
@@ -105,8 +102,8 @@ analytics.current_batch_state
 
 Результат:
 
-* `total_quantity` — сумма по складу и статусу
-* `warehouse_total_quantity` — общий объём по складу
+* `total` — общий объём по складу
+* `by_status` — распределение по статусам
 
 ⚠️ В V1:
 * `by_reason` отсутствует
@@ -115,25 +112,20 @@ analytics.current_batch_state
 
 ## 5. Объединение данных
 
-Агрегация объединяется с географией:
-
 ```
 analytics.warehouses
 LEFT JOIN aggregation
-ON warehouse_id
 ```
 
 Особенности:
 
-* используются ВСЕ склады
-* склады без данных получают `total = 0`
-* реализовано на уровне Python (map_builder)
+* ВСЕ склады попадают в ответ
+* пустые склады → `total = 0`
+* реализовано в Python (map_builder)
 
 ---
 
 ## 6. API
-
-Endpoint:
 
 ```
 GET /api/analytics/map
@@ -141,9 +133,9 @@ GET /api/analytics/map
 
 Особенности:
 
-* новый endpoint (старый /api/map не изменяется)
+* новый endpoint
 * один запрос
-* полностью основан на analytics
+* полностью на analytics
 
 ---
 
@@ -157,9 +149,6 @@ GET /api/analytics/map
       "name": "Склад",
       "lat": 59.93,
       "lon": 30.31,
-
-      "quantity": 120,
-
       "metrics": {
         "total": 120,
         "by_status": [
@@ -173,12 +162,6 @@ GET /api/analytics/map
 }
 ```
 
-Особенности:
-
-* `quantity` = `metrics.total`
-* используется фронтом для визуализации (радиус)
-* добавлено для backward compatibility
-
 ---
 
 ## 8. Визуализация
@@ -190,53 +173,45 @@ GET /api/analytics/map
 
 Слои:
 
-* общий объём (`total`)
+* общий объём (`metrics.total`)
 * по статусам (`by_status`)
-
-⚠️ В V1:
-* используется `quantity` для radius (наследие Project №1)
 
 ---
 
 ## 9. Пустые склады
 
-Склады без активных партий:
-
 * отображаются
-* имеют `total = 0`
-* имеют `quantity = 0`
+* `total = 0`
 * `by_status = []`
 
 ---
 
 ## 10. Ограничения
 
-1. Нет `by_reason` (будет в V2)
-2. Нет маршрутов (будут позже)
-3. Агрегация выполняется на лету
+1. Нет `by_reason`
+2. Нет маршрутов
+3. Агрегация on-the-fly
 4. Нет кеша
-5. Есть временная зависимость от старого поля `quantity`
 
 ---
 
 ## 11. Инварианты
 
-1. Только analytics — источник данных
+1. Только analytics — источник
 2. Нет зависимости от OLTP
 3. `current_batch_state` — факты
 4. `warehouses` — география
 5. Все склады отображаются
-6. `quantity = metrics.total`
+6. frontend использует `metrics.total`
 
 ---
 
 ## 12. Trade-offs
 
-1. Простота > гибкость (V1)
+1. Простота > гибкость
 2. Python сборка > SQL JSON
 3. Нет PostGIS
 4. Один endpoint
-5. Временный слой совместимости (quantity)
 
 ---
 
@@ -244,11 +219,10 @@ GET /api/analytics/map
 
 Project №3 реализует:
 
-* полностью независимую карту
-* агрегированные метрики
-* рабочий production pipeline
-* совместимость со старым фронтом
+* чистую аналитическую карту
+* строгий API без legacy
+* полную независимость от OLTP
 
 ---
 
-Архитектура Project №3 зафиксирована (V1 Final).
+Архитектура Project №3 зафиксирована (V1 Final, Clean).
