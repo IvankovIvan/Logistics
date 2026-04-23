@@ -1,44 +1,54 @@
-# 📘 Project №4 --- MS SQL → Postgres Ingestion Pipeline
+# /opt/Logistics/docs/_work/project-4-mssql-ingestion.md
+
+# 📘 Project №4 --- MS SQL → Postgres Ingestion Pipeline (V2)
 
 ------------------------------------------------------------------------
 
 ## 1. Общая идея
 
-Project №4 реализует надёжную передачу данных из MS SQL\
-в аналитический слой (Postgres).
+Project №4 реализует надёжную доставку данных из внешней системы (MS
+SQL) в аналитический слой (Postgres), используемый в Project №2.
 
 Система построена по принципу:
 
-pull → batch → ingest → store → cleanup
+source → extract → ingest → buffer → process
 
 ------------------------------------------------------------------------
 
 ## 2. Архитектурный поток
 
-MS SQL (source_table) ↓ analytics-worker ↓ POST
-/api/analytics/ingest/events ↓ Postgres: - inventory_status_events -
-sync_state ↓ cleanup (MS SQL)
+MS SQL (source_table) ↓ mssql-extractor ↓ POST
+/api/analytics/ingest/events ↓ Postgres: - inventory_status_events
+(buffer) ↓ analytics_worker ↓ current_batch_state (snapshot)
 
 ------------------------------------------------------------------------
 
 ## 3. Основные компоненты
 
-### 3.1 Source Table (MS SQL)
+### 3.1 MS SQL (Source)
 
--   подготовленные данные
--   event_id (IDENTITY, уникальный)
--   временное хранилище
+-   хранит подготовленные события
+-   содержит event_id (IDENTITY)
+-   является временным буфером
+-   очищается автоматически (retention policy ≥ 24 часа)
 
 ------------------------------------------------------------------------
 
-### 3.2 Analytics Worker
+### 3.2 MS SQL Extractor
+
+Сервис:
+
+mssql-extractor
 
 Функции:
 
 -   читает данные из MS SQL
--   использует cursor (event_id)
--   отправляет batch в API
--   управляет очисткой
+-   использует ingest_cursor (из Postgres)
+-   работает в адаптивном цикле (без scheduler)
+-   отправляет batch в ingest API
+-   выполняет retry
+-   изолирует ошибки (split & DLQ)
+-   НЕ взаимодействует напрямую с Postgres (кроме cursor)
 
 ------------------------------------------------------------------------
 
@@ -52,7 +62,8 @@ POST /api/analytics/ingest/events
 
 -   принимает batch событий (JSON)
 -   вставляет в Postgres
--   гарантирует idempotency
+-   гарантирует idempotency (operation_id + event_time)
+-   возвращает per-event статус (applied / duplicate / rejected)
 
 ------------------------------------------------------------------------
 
@@ -63,99 +74,135 @@ POST /api/analytics/ingest/events
 analytics.inventory_status_events
 
 -   append-only
--   UNIQUE(event_id)
+-   partitioned
 -   источник истины
+-   хранит события как очередь (buffer)
 
 ------------------------------------------------------------------------
 
-### 3.5 Sync State
+### 3.5 Analytics Worker
+
+Функции:
+
+-   читает события по event_id
+-   использует processing_cursor
+-   обновляет snapshot
+-   обновляет cursor только после успешного batch
+
+------------------------------------------------------------------------
+
+### 3.6 Dead Letter Queue (DLQ)
 
 Таблица:
 
-analytics.sync_state
+analytics.ingest_dead_letter
 
--   хранит last_event_id
--   используется как cursor
+Назначение:
 
-------------------------------------------------------------------------
-
-## 4. Cursor-based ingestion
-
-SELECT TOP (N) WHERE event_id \> last_event_id ORDER BY event_id
+-   хранит "битые" события
+-   содержит payload, ошибку и timestamp
+-   используется для анализа и возможного replay
 
 ------------------------------------------------------------------------
 
-## 5. Batch processing
+## 4. Cursor модель
 
--   размер batch: до 5000
--   JSON формат:
+Система использует ДВА cursor'а:
 
-{ "events": \[...\] }
+ingest_cursor --- что загружено в Postgres\
+processing_cursor --- что обработано worker'ом
+
+Хранение:
+
+analytics.worker_state:
+
+-   mssql_extractor → ingest_cursor\
+-   analytics_worker → processing_cursor
 
 ------------------------------------------------------------------------
 
-## 6. Гарантия доставки
+## 5. Ingestion логика
 
-at-least-once + idempotency = effectively exactly-once
+Extractor выполняет:
+
+SELECT WHERE event_id \> ingest_cursor ORDER BY event_id LIMIT
+batch_size
+
+После успешной вставки:
+
+ingest_cursor = max(event_id batch)
 
 Правила:
 
--   ON CONFLICT DO NOTHING
--   cursor обновляется после вставки
--   одна транзакция
+-   cursor обновляется ТОЛЬКО после полного успеха batch
+-   rejected события изолируются (не блокируют pipeline)
 
 ------------------------------------------------------------------------
 
-## 7. Логика worker
+## 6. Processing логика
 
-1.  читаем last_event_id
-2.  получаем batch
-3.  отправляем в API
-4.  проверяем inserted == received
-5.  обновляем cursor или retry
+Worker выполняет:
 
-------------------------------------------------------------------------
+SELECT WHERE event_id \> processing_cursor ORDER BY event_id LIMIT
+batch_size
 
-## 8. Cleanup (MS SQL)
+После обработки:
 
-DELETE FROM source_table WHERE event_id \<= last_event_id - buffer
-
-Параметры:
-
--   buffer ≈ 3000
--   выполняется периодически
+processing_cursor обновляется
 
 ------------------------------------------------------------------------
 
-## 9. Мониторинг
+## 7. Буферизация
 
-Метрики:
+Postgres выступает как очередь:
 
--   lag
--   batch_size
--   inserted_count
--   duration
-
-lag = max(event_id MS SQL) - last_event_id
+-   ingestion быстрый (максимально возможный)
+-   processing независимый (может отставать)
 
 ------------------------------------------------------------------------
 
-## 10. Инварианты системы
+## 8. Cleanup
 
-1.  Postgres --- источник истины
-2.  MS SQL --- временный буфер
-3.  порядок событий сохраняется
-4.  нет потерь данных
-5.  cursor монотонный
+Очистка выполняется MS SQL автоматически:
+
+-   retention policy ≥ 24 часа
+-   данные удаляются по времени, не по cursor
+
+⚠️ Требование:
+
+retention должен покрывать worst-case lag системы
+
+------------------------------------------------------------------------
+
+## 9. Гарантии
+
+-   нет потерь данных (cursor обновляется после commit)
+-   нет дублей (idempotency)
+-   порядок событий сохраняется (event_id)
+-   система устойчива к сбоям (retry + DLQ)
+
+------------------------------------------------------------------------
+
+## 10. Инварианты
+
+1.  extractor использует ingest_cursor\
+2.  worker использует processing_cursor\
+3.  ingestion и processing независимы\
+4.  Postgres = буфер (очередь)\
+5.  MS SQL = источник + временный буфер\
+6.  cursor монотонный\
+7.  cursor обновляется только после успеха\
+8.  rejected события НЕ блокируют pipeline
 
 ------------------------------------------------------------------------
 
 ## 11. Ограничения
 
-1.  один worker
-2.  batch ingestion
-3.  JSON транспорт
-4.  нет real-time streaming
+-   один extractor\
+-   один worker\
+-   batch processing\
+-   JSON транспорт\
+-   cleanup не привязан к cursor
 
 ------------------------------------------------------------------------
 
@@ -163,24 +210,26 @@ lag = max(event_id MS SQL) - last_event_id
 
 Система реализует:
 
--   надёжный ingestion
--   сохранение порядка
--   защиту от потерь
--   простую архитектуру
+-   надёжный ingestion pipeline\
+-   разделение ingestion и processing\
+-   устойчивую архитектуру\
+-   масштабируемую модель\
+-   обработку ошибок через DLQ
 
 ------------------------------------------------------------------------
 
 ## 13. Статус
 
-  Компонент     Статус
-  ------------- --------
-  Worker        ✔
-  Ingest API    ✔
-  Event Store   ✔
-  Cursor        ✔
-  Cleanup       ✔
-  Monitoring    ✔
+  Компонент      Статус
+  -------------- --------
+  Extractor      ✔
+  Ingest API     ✔
+  Event Store    ✔
+  Worker         ✔
+  Cursor model   ✔
+  Cleanup        ✔
+  DLQ            ✔
 
 ------------------------------------------------------------------------
 
-**Архитектура Project №4 реализована полностью.**
+**Архитектура Project №4 (V2) завершена.**
