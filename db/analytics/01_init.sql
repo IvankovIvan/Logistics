@@ -347,3 +347,11 @@ CREATE TRIGGER trg_touch_warehouses_updated_at
 BEFORE UPDATE ON analytics.warehouses
 FOR EACH ROW
 EXECUTE FUNCTION analytics.touch_warehouses_updated_at();
+
+CREATE TABLE IF NOT EXISTS analytics.ingest_dead_letter (
+    id BIGSERIAL PRIMARY KEY,
+    source_event_id BIGINT NOT NULL,
+    payload JSONB NOT NULL,
+    error TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

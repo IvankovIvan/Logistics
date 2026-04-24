@@ -23,6 +23,7 @@ from app.workers.mssql_extractor.postgres import (
 )
 from app.workers.mssql_extractor.api import send_batch
 
+from app.workers.mssql_extractor.dlq import save_to_dlq
 
 # интервал ожидания, если новых событий нет
 SLEEP_SECONDS = 5
@@ -34,6 +35,30 @@ def chunked(batch, size):
     """
     for i in range(0, len(batch), size):
         yield batch[i:i + size]
+
+
+def process_chunk(chunk):
+    try:
+        result = send_batch(chunk)
+
+        # проверяем rejected
+        for item in result["results"]:
+            if item["status"] == "rejected":
+                raise RuntimeError("есть rejected события")
+
+        return
+
+    except Exception:
+        print("split chunk:", len(chunk))
+
+        if len(chunk) == 1:
+            save_to_dlq(chunk[0], "rejected or failed event")
+            print("DLQ EVENT saved:", chunk[0])
+            return
+
+        mid = len(chunk) // 2
+        process_chunk(chunk[:mid])
+        process_chunk(chunk[mid:])
 
 
 def run() -> None:
@@ -87,13 +112,11 @@ def run() -> None:
             # API делает:
             # - idempotency
             # - запись в event store
-            # важно: мы читаем большой batch из MS SQL,
-            # но отправляем в API маленькими частями (chunk),
-            # чтобы не перегружать Postgres и FastAPI
+            # chunking ограничивает размер запроса к API
+            # split используется для изоляции битых событий внутри chunk
             for chunk in chunked(batch, 100):
-                result = send_batch(chunk)
-                print("chunk sent, size =", len(chunk))
-            print("API result:", result)
+                process_chunk(chunk)
+                print("chunk processed:", len(chunk))
 
             # --- обновление cursor ---
             # важно: cursor двигается ТОЛЬКО после успешной отправки
