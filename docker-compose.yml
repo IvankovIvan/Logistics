@@ -208,13 +208,30 @@ services:
       INGEST_API_URL: ${INGEST_API_URL}
 
       # --- MSSQL extractor config ---
-      MSSQL_BATCH_SIZE: 1000
+      # сколько событий читаем за один запрос из MS SQL
+      # влияет на скорость ingestion и нагрузку на источник
+      # сколько забираем из MSSQL за раз (batch size)
+      SQL_BATCH_SIZE: 1000
+      
+      # на сколько событий делим batch при отправке в API 
+      # меньше = стабильнее, больше = быстрее 
       MSSQL_CHUNK_SIZE: 100
-      MSSQL_SLEEP_SECONDS: 5
-
+      
+      # сколько секунд ждать, если новых событий нет в MS SQL
+      # уменьшать = быстрее реакция, но больше нагрузка на источник 
+      # пауза если пусто 
+      MSSQL_SLEEP_SECONDS: 20
+      
+      # сколько раз повторять отправку при ошибке (retry)
+      # защищает от временных сбоев сети или API
       MSSQL_MAX_RETRIES: 3
-      MSSQL_RETRY_DELAY: 2
-
+      
+      # пауза между retry (в секундах)
+      # увеличивать, если API не успевает
+      MSSQL_RETRY_DELAY: 10
+      
+      # таймаут HTTP-запроса к ingest API (в секундах)
+      # защищает от зависания при недоступном сервисе
       MSSQL_HTTP_TIMEOUT: 30
 
     depends_on:
