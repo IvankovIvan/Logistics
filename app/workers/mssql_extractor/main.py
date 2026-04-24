@@ -1,14 +1,15 @@
 """
-Тестовый модуль: связка Postgres cursor + MS SQL + Ingest API.
+MS SQL → Postgres ingestion worker (loop версия)
 
-Назначение:
-- читаем ingest_cursor из Postgres
-- читаем batch из MS SQL (только новые события)
-- отправляем batch в ingest API
-- при успехе двигаем cursor вперёд
+Теперь работает как сервис:
+- постоянно читает новые события
+- отправляет их в API
+- двигает cursor
 """
 
 from __future__ import annotations
+
+import time
 
 from app.workers.mssql_extractor.mssql import (
     fetch_batch,
@@ -23,59 +24,108 @@ from app.workers.mssql_extractor.postgres import (
 from app.workers.mssql_extractor.api import send_batch
 
 
-if __name__ == "__main__":
-    # --- Postgres (cursor) ---
+# интервал ожидания, если новых событий нет
+SLEEP_SECONDS = 5
+
+
+def chunked(batch, size):
+    """
+    Делит список batch на части фиксированного размера.
+    """
+    for i in range(0, len(batch), size):
+        yield batch[i:i + size]
+
+
+def run() -> None:
+    """
+    Основной цикл ingestion воркера.
+
+    Логика:
+    1. читаем cursor (последний обработанный event_id)
+    2. берём новые события из MS SQL
+    3. отправляем их в ingest API
+    4. при успехе двигаем cursor
+    """
+
+    print("start app")
+    # --- соединения ---
+    # Postgres нужен для cursor
     pg_conn = get_pg_connection()
 
-    # если первый запуск — создаём строку cursor
-    ensure_worker_row(pg_conn)
-
-    # читаем текущий cursor
-    ingest_cursor = get_ingest_cursor(pg_conn)
-    print("ingest_cursor =", ingest_cursor)
-
-    # --- MS SQL (source) ---
+    # MS SQL — источник данных
     mssql_conn = get_mssql_connection()
 
-    # читаем только новые события:
-    # event_id > ingest_cursor
-    batch = fetch_batch(mssql_conn, ingest_cursor, 10)
+    print("start while")
+    # гарантируем, что строка cursor существует
+    ensure_worker_row(pg_conn)
 
-    print("batch size =", len(batch))
+    print("mssql_extractor started")
 
-    # чтобы не заспамить лог — выводим первые 5
-    for item in batch[:5]:
-        print(item)
+    while True:
+        try:
+            print("start while")
+            # --- читаем текущий cursor ---
+            # ingest_cursor = последний обработанный event_id
+            ingest_cursor = get_ingest_cursor(pg_conn)
+            print("\ningest_cursor =", ingest_cursor)
 
-    # --- если есть данные → отправляем ---
-    if batch:
-        print("sending batch to API...")
+            # --- читаем batch из MS SQL ---
+            # берём только события с event_id > ingest_cursor
+            batch = fetch_batch(mssql_conn, ingest_cursor, 1000)
 
-        result = send_batch(batch)
+            print("batch size =", len(batch))
 
-        print("API result:", result)
+            # --- если данных нет ---
+            if not batch:
+                print("no new events → sleep")
+                time.sleep(SLEEP_SECONDS)
+                continue
 
-        # --- обновляем cursor ---
-        # Pylance-safe версия (без cast, с явной типизацией)
-        event_ids: list[int] = []
+            print("sending batch...")
 
-        for item in batch:
-            value = item.get("event_id")
+            # --- отправка в ingest API ---
+            # API делает:
+            # - idempotency
+            # - запись в event store
+            # важно: мы читаем большой batch из MS SQL,
+            # но отправляем в API маленькими частями (chunk),
+            # чтобы не перегружать Postgres и FastAPI
+            for chunk in chunked(batch, 100):
+                result = send_batch(chunk)
+                print("chunk sent, size =", len(chunk))
+            print("API result:", result)
 
-            if value is None:
-                raise RuntimeError("event_id отсутствует в batch")
+            # --- обновление cursor ---
+            # важно: cursor двигается ТОЛЬКО после успешной отправки
 
-            event_id = int(value)
-            event_ids.append(event_id)
+            event_ids: list[int] = []
 
-        max_event_id = max(event_ids)
+            for item in batch:
+                # event_id — ключ порядка событий
+                value = item.get("event_id")
 
-        update_ingest_cursor(pg_conn, max_event_id)
+                if value is None:
+                    raise RuntimeError("event_id отсутствует")
 
-        print("cursor updated to", max_event_id)
-    else:
-        print("no new events")
+                # приводим к int (гарантия корректного типа)
+                event_ids.append(int(value))
 
-    # --- закрываем соединения ---
-    mssql_conn.close()
-    pg_conn.close()
+            # берём максимальный event_id из batch
+            max_event_id = max(event_ids)
+
+            # сохраняем новый cursor в Postgres
+            update_ingest_cursor(pg_conn, max_event_id)
+
+            print("cursor updated to", max_event_id)
+
+        except Exception as e:
+            # --- обработка ошибок ---
+            # воркер НЕ должен падать
+            print("ERROR:", e)
+
+            # даём системе "остыть"
+            time.sleep(3)
+
+
+if __name__ == "__main__":
+    run()

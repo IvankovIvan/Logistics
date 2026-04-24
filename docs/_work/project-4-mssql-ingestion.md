@@ -73,7 +73,7 @@ mssql-extractor
 Текущая реализация разбита на модули:
 
 app/workers/mssql_extractor/
-- main.py — orchestration
+- main.py — orchestration (loop + chunking)
 - mssql.py — MS SQL (fetch)
 - postgres.py — cursor
 - api.py — отправка в ingest API
@@ -84,6 +84,37 @@ app/workers/mssql_extractor/
 - строгая типизация данных (убрали object/dict)
 - event_time приводится к ISO строке (JSON-safe)
 - send_batch использует Sequence + Mapping (ковариантность)
+
+------------------------------------------------------------------------
+
+### 🔧 3.2.3 Chunking (добавлено)
+
+Реализовано разбиение batch на части перед отправкой в API.
+
+Причина:
+
+- большие batch (1000+) перегружают FastAPI и Postgres
+- возможны зависания и долгие транзакции
+
+Решение:
+
+- batch читается большим (до 5000)
+- отправляется маленькими частями (например 100)
+
+Пример:
+
+fetch: 1000 событий
+↓
+chunking:
+[100] [100] [100] …
+↓
+send_batch для каждого chunk
+
+Преимущества:
+
+- стабильная нагрузка
+- отсутствие зависаний
+- контролируемый throughput
 
 ------------------------------------------------------------------------
 
@@ -239,6 +270,9 @@ ingest_cursor = max(event_id batch)
   list → Sequence  
   dict → Mapping  
 
+- добавлен chunking:
+  большие batch → маленькие insert'ы
+
 ------------------------------------------------------------------------
 
 ## 6. Processing логика
@@ -303,6 +337,7 @@ retention ≥ 24 часа
 | Batch fetch      | ✔ |
 | Ingest API       | ✔ |
 | Cursor update    | ✔ |
+| Chunking         | ✔ |
 | Retry / DLQ      | ⏳ |
 
 ------------------------------------------------------------------------
@@ -313,10 +348,11 @@ fetch → готово
 cursor → готово  
 API → готово  
 cursor update → готово  
+chunking → готово  
 
 следующий этап:
 
-retry + DLQ + loop
+retry + DLQ + split
 
 ------------------------------------------------------------------------
 

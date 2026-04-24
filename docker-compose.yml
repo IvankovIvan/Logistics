@@ -192,7 +192,7 @@ services:
     working_dir: /app
     volumes:
       - ./app:/app
-    command: python -m app.workers.mssql_extractor.main
+    command: python -u -m app.workers.mssql_extractor.main
     environment:
       PYTHONPATH: /
 
