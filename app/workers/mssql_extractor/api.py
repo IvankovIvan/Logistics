@@ -17,11 +17,14 @@ from collections.abc import Sequence
 from typing import List, Mapping, Optional, TypedDict
 
 import requests
+from app.workers.mssql_extractor.config import (
+    HTTP_TIMEOUT,
+    MAX_RETRIES,
+    RETRY_DELAY,
+)
 
 
-# retry нужен для защиты от временных ошибок сети или API
-MAX_RETRIES = 3
-RETRY_DELAY = 2
+# настройки retry и timeout управляются через config.py
 
 
 class ResultItem(TypedDict):
@@ -60,7 +63,7 @@ def send_batch(batch: Sequence[Mapping[str, object]]) -> SendBatchResponse:
             response = requests.post(
                 url,
                 json={"events": batch},
-                timeout=30,
+                timeout=HTTP_TIMEOUT,
             )
 
             # HTTP 5xx — ошибка сервера → retry

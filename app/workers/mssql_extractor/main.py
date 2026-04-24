@@ -22,11 +22,15 @@ from app.workers.mssql_extractor.postgres import (
     update_ingest_cursor,
 )
 from app.workers.mssql_extractor.api import send_batch
+from app.workers.mssql_extractor.config import (
+    BATCH_SIZE,
+    CHUNK_SIZE,
+    SLEEP_SECONDS,
+)
 
 from app.workers.mssql_extractor.dlq import save_to_dlq
 
-# интервал ожидания, если новых событий нет
-SLEEP_SECONDS = 5
+# значения вынесены в config.py и управляются через env
 
 
 def chunked(batch, size):
@@ -96,7 +100,7 @@ def run() -> None:
 
             # --- читаем batch из MS SQL ---
             # берём только события с event_id > ingest_cursor
-            batch = fetch_batch(mssql_conn, ingest_cursor, 1000)
+            batch = fetch_batch(mssql_conn, ingest_cursor, BATCH_SIZE)
 
             print("batch size =", len(batch))
 
@@ -114,7 +118,7 @@ def run() -> None:
             # - запись в event store
             # chunking ограничивает размер запроса к API
             # split используется для изоляции битых событий внутри chunk
-            for chunk in chunked(batch, 100):
+            for chunk in chunked(batch, CHUNK_SIZE):
                 process_chunk(chunk)
                 print("chunk processed:", len(chunk))
 
