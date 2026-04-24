@@ -12,8 +12,26 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
+from typing import TypedDict
 
 import pyodbc
+
+
+class EventRow(TypedDict):
+    event_id: int
+    operation_id: int
+    batch_id: int
+    order_id: int
+    sku_id: int
+    warehouse_id: int
+    source_location_id: int | None
+    destination_location_id: int | None
+    status_id: int
+    status_reason_id: int
+    quantity: int
+    event_time: str
+    source_system: int
 
 
 # Включаем pooling на уровне драйвера pyodbc,
@@ -75,7 +93,7 @@ def fetch_batch(
     conn: pyodbc.Connection,
     ingest_cursor: int,
     batch_size: int,
-) -> list[dict[str, object]]:
+) -> list[EventRow]:
     """
     Читает порцию событий из MS SQL начиная с ingest_cursor.
 
@@ -98,6 +116,43 @@ def fetch_batch(
         cursor.execute("EXEC sp_get_events_after_id ?, ?", ingest_cursor, batch_size)
 
         columns = [col[0] for col in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        result: list[EventRow] = []
+        for row in cursor.fetchall():
+            values_by_column = {name: value for name, value in zip(columns, row)}
+
+            event_time_value = values_by_column["event_time"]
+            if isinstance(event_time_value, datetime):
+                event_time_str = event_time_value.isoformat()
+            else:
+                event_time_str = str(event_time_value)
+
+            row_dict: EventRow = {
+                "event_id": int(values_by_column["event_id"]),
+                "operation_id": int(values_by_column["operation_id"]),
+                "batch_id": int(values_by_column["batch_id"]),
+                "order_id": int(values_by_column["order_id"]),
+                "sku_id": int(values_by_column["sku_id"]),
+                "warehouse_id": int(values_by_column["warehouse_id"]),
+                "source_location_id": (
+                    None
+                    if values_by_column["source_location_id"] is None
+                    else int(values_by_column["source_location_id"])
+                ),
+                "destination_location_id": (
+                    None
+                    if values_by_column["destination_location_id"] is None
+                    else int(values_by_column["destination_location_id"])
+                ),
+                "status_id": int(values_by_column["status_id"]),
+                "status_reason_id": int(values_by_column["status_reason_id"]),
+                "quantity": int(values_by_column["quantity"]),
+                "event_time": event_time_str,
+                "source_system": int(values_by_column["source_system"]),
+            }
+
+            result.append(row_dict)
+
+        return result
     finally:
         cursor.close()

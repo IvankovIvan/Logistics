@@ -107,3 +107,24 @@ def ensure_worker_row(conn: Connection) -> None:
         )
 
     conn.commit()
+
+
+def update_ingest_cursor(conn: Connection, new_cursor: int) -> None:
+    """
+    Обновляет ingest_cursor в analytics.worker_state.
+
+    new_cursor — это максимальный event_id,
+    который успешно обработан и отправлен в систему.
+    """
+    with conn.cursor() as cur:
+        # cursor обновляется только после успешного batch
+        cur.execute(
+            """
+            UPDATE analytics.worker_state
+            SET last_processed_event_id = %s
+            WHERE worker_name = %s;
+            """,
+            (new_cursor, WORKER_NAME),
+        )
+
+    conn.commit()

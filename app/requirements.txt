@@ -4,3 +4,4 @@ uvicorn
 pytest
 psycopg[binary]>=3.1
 pyodbc
+requests

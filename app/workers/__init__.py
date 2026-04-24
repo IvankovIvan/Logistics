@@ -1,3 +1,9 @@
-from .analytics_worker import process_batch, run_worker
+# /opt/Logistics/app/workers/__init__.py
 
-__all__ = ["process_batch", "run_worker"]
+"""
+Пакет воркеров.
+ВАЖНО:
+Не импортировать здесь конкретные воркеры (analytics_worker и т.д.),
+так как это приводит к двойной загрузке модулей при запуске через `python -m`.
+Если нужно запустить конкретный воркер, то импортировать его напрямую:
+"""
