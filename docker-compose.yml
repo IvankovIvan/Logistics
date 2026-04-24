@@ -182,6 +182,37 @@ services:
 
     restart: unless-stopped
 
+  # ---------------------------------------------------
+  # 7️⃣ MS SQL Extractor
+  # ---------------------------------------------------
+  mssql-extractor:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    command: python -m app.workers.mssql_extractor.main
+    environment:
+      PYTHONPATH: /
+
+      # --- MSSQL ---
+      MSSQL_HOST: ${MSSQL_HOST}
+      MSSQL_PORT: ${MSSQL_PORT}
+      MSSQL_DB: ${MSSQL_DB}
+      MSSQL_USER: ${MSSQL_USER}
+      MSSQL_PASSWORD: ${MSSQL_PASSWORD}
+      MSSQL_DRIVER: ${MSSQL_DRIVER}
+
+      # --- API ---
+      INGEST_API_URL: ${INGEST_API_URL}
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    restart: no # unless-stopped
+
 # ---------------------------------------------------
 # Volumes (persistency)
 # ---------------------------------------------------
