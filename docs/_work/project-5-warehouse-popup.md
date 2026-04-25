@@ -295,6 +295,20 @@ window.open("/api/.../batches.csv")
 
 ---
 
+### 8.5 Popup UI (добавлено)
+
+* JSON отображение заменено на HTML
+* отображается:
+        * название склада
+        * warehouse_id
+        * count (Партии)
+        * sum (Объём)
+        * список статусов (status_text, count / sum)
+* используется `setHTML` с template string
+* React/JSX не используется (MapLibre ограничения)
+
+---
+
 ## 9. Ограничения
 
 1. Нет кеширования
@@ -324,7 +338,8 @@ window.open("/api/.../batches.csv")
 | Backend агрегаты | ✔ |
 | CSV endpoint | ✔ |
 | Frontend (базовый popup) | ✔ |
-| Frontend UI | ⏳ |
+| Frontend UI | ✔ |
+| CSV кнопка | ⏳ |
 
 ---
 

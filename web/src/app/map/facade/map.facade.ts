@@ -125,8 +125,40 @@ export class MapFacade {
         const response = await fetch(`/api/analytics/warehouse/${warehouseId}`);
 
         if (response.ok) {
-          const data = await response.json();
-          popup.setHTML(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+          const data = (await response.json()) as {
+            warehouse_id: number;
+            name: string;
+            metrics: {
+              count: number;
+              sum: number;
+              by_status: Array<{
+                status_text: string;
+                count: number;
+                sum: number;
+              }>;
+            };
+          };
+
+          const byStatus = data.metrics.by_status ?? [];
+          const statusesHtml =
+            byStatus.length > 0
+              ? byStatus
+                  .map(
+                    (s) =>
+                      `<div>${String(s.status_text)} — ${Number(s.count)} / ${Number(s.sum)}</div>`
+                  )
+                  .join("")
+              : "<div>Нет данных</div>";
+
+          const html = `
+            <h3>${String(data.name)}</h3>
+            <div>ID: ${Number(data.warehouse_id)}</div>
+            <div>Партии: ${Number(data.metrics.count)}</div>
+            <div>Объём: ${Number(data.metrics.sum)}</div>
+            ${statusesHtml}
+          `;
+
+          popup.setHTML(html);
           return;
         }
 
