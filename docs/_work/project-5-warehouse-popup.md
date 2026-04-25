@@ -143,6 +143,36 @@ JOIN analytics.status_dict
 
 ## 6. Edge Cases
 
+## 6.1 Swagger и типизация (добавлено)
+
+Описание:
+
+* используется Pydantic BaseModel для response_model
+* TypedDict НЕ используется для API контрактов
+* Swagger должен отображать структуру ответа
+
+---
+
+## 6.2 Типизация psycopg (добавлено)
+
+Описание:
+
+* psycopg возвращает dict[str, object]
+* прямое использование row приводит к ошибкам типизации
+* используется TypedDict + cast для сужения типов
+
+Пример:
+
+class _WarehouseRow(TypedDict):
+        warehouse_id: int
+        name: str
+        city: str
+        warehouse_type: str
+
+row_typed = cast(_WarehouseRow, row)
+
+---
+
 ### 6.1 Склад не существует
 
 Backend: 404 Not Found  
@@ -247,10 +277,10 @@ window.open("/api/.../batches.csv")
 
 | Шаг | Статус |
 |-----|--------|
-| Архитектура | ✔ |
-| Контракты API | ✔ |
-| SQL | ✔ |
-| Backend | ⏳ |
+| Backend metadata | ✔ |
+| Swagger + типизация | ✔ |
+| Backend агрегаты | ⏳ |
+| CSV endpoint | ⏳ |
 | Frontend | ⏳ |
 
 ---

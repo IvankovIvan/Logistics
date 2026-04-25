@@ -84,6 +84,21 @@ ORDER BY
 """
 
 
+SELECT_WAREHOUSE_METADATA = """
+SELECT
+    w.warehouse_id,
+    w.name,
+    c.name AS city,
+    wt.name AS warehouse_type
+FROM analytics.warehouses w
+JOIN analytics.cities c
+    ON c.city_id = w.city_id
+JOIN analytics.warehouse_types wt
+    ON wt.warehouse_type_id = w.warehouse_type_id
+WHERE w.warehouse_id = %(warehouse_id)s;
+"""
+
+
 def _as_mapping(row: Any) -> Mapping[str, Any]:
     """
     Приводит строку курсора к Mapping.
@@ -184,3 +199,33 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
         )
 
     return result
+
+
+def get_analytics_warehouse_metadata(
+    warehouse_id: int,
+) -> dict[str, object] | None:
+    """
+    Возвращает metadata одного склада из analytics-справочников.
+
+    Если склад не найден, возвращает None.
+    """
+
+    with get_analytics_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                SELECT_WAREHOUSE_METADATA,
+                {"warehouse_id": warehouse_id},
+            )
+            raw_row = cur.fetchone()
+
+    if raw_row is None:
+        return None
+
+    row = _as_mapping(raw_row)
+
+    return {
+        "warehouse_id": int(row["warehouse_id"]),
+        "name": str(row["name"]),
+        "city": str(row["city"]),
+        "warehouse_type": str(row["warehouse_type"]),
+    }
