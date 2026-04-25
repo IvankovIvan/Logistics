@@ -99,6 +99,25 @@ WHERE w.warehouse_id = %(warehouse_id)s;
 """
 
 
+SELECT_WAREHOUSE_METRICS = """
+SELECT
+    s.status_id,
+    d.code AS status_text,
+    COUNT(*) AS count,
+    SUM(s.quantity) AS sum,
+    COUNT(*) OVER () AS total_count,
+    SUM(SUM(s.quantity)) OVER () AS total_sum
+FROM analytics.current_batch_state s
+LEFT JOIN analytics.status_dict d
+    ON d.status_id = s.status_id
+WHERE s.warehouse_id = %(warehouse_id)s
+GROUP BY
+    s.status_id,
+    d.code
+ORDER BY sum DESC;
+"""
+
+
 def _as_mapping(row: Any) -> Mapping[str, Any]:
     """
     Приводит строку курсора к Mapping.
@@ -229,3 +248,37 @@ def get_analytics_warehouse_metadata(
         "city": str(row["city"]),
         "warehouse_type": str(row["warehouse_type"]),
     }
+
+
+def get_analytics_warehouse_metrics(warehouse_id: int) -> list[dict[str, object]]:
+    """
+    Возвращает агрегированные метрики склада из current_batch_state.
+
+    Один SQL-запрос:
+    - by_status (count/sum)
+    - total_count/total_sum через window functions.
+    """
+
+    with get_analytics_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                SELECT_WAREHOUSE_METRICS,
+                {"warehouse_id": warehouse_id},
+            )
+            raw_rows = cur.fetchall()
+
+    result: list[dict[str, object]] = []
+    for raw_row in raw_rows:
+        row = _as_mapping(raw_row)
+        result.append(
+            {
+                "status_id": int(row["status_id"]),
+                "status_text": str(row["status_text"]),
+                "count": int(row["count"] or 0),
+                "sum": int(row["sum"] or 0),
+                "total_count": int(row["total_count"] or 0),
+                "total_sum": int(row["total_sum"] or 0),
+            }
+        )
+
+    return result

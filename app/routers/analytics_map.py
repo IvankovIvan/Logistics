@@ -15,10 +15,15 @@ import logging
 from typing import TypedDict, cast
 
 from fastapi import APIRouter, HTTPException, status
-from app.models.analytics.warehouse_metadata import AnalyticsWarehouseMetadata
+from app.models.analytics.warehouse_metadata import (
+    AnalyticsWarehouseMetadata,
+    AnalyticsWarehouseMetrics,
+    AnalyticsWarehouseStatus,
+)
 
 from app.services.analytics_map_builder import (
     build_analytics_map_warehouses,
+    get_analytics_warehouse_metrics,
     get_analytics_warehouse_metadata,
 )
 
@@ -31,6 +36,15 @@ class _WarehouseRow(TypedDict):
     name: str
     city: str
     warehouse_type: str
+
+
+class _WarehouseMetricRow(TypedDict):
+    status_id: int
+    status_text: str
+    count: int
+    sum: int
+    total_count: int
+    total_sum: int
 
 router = APIRouter(
     prefix="/api/analytics",
@@ -94,9 +108,38 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
 
     row_typed = cast(_WarehouseRow, row)
 
+    metric_rows = get_analytics_warehouse_metrics(warehouse_id)
+
+    if metric_rows:
+        first_metric_row = cast(_WarehouseMetricRow, metric_rows[0])
+        total_count = int(first_metric_row["total_count"])
+        total_sum = int(first_metric_row["total_sum"])
+    else:
+        total_count = 0
+        total_sum = 0
+
+    by_status: list[AnalyticsWarehouseStatus] = []
+    for metric_row in metric_rows:
+        metric_row_typed = cast(_WarehouseMetricRow, metric_row)
+        by_status.append(
+            AnalyticsWarehouseStatus(
+                status_id=int(metric_row_typed["status_id"]),
+                status_text=str(metric_row_typed["status_text"]),
+                count=int(metric_row_typed["count"]),
+                sum=int(metric_row_typed["sum"]),
+            )
+        )
+
+    metrics_model = AnalyticsWarehouseMetrics(
+        count=total_count,
+        sum=total_sum,
+        by_status=by_status,
+    )
+
     return AnalyticsWarehouseMetadata(
         warehouse_id=row_typed["warehouse_id"],
         name=row_typed["name"],
         city=row_typed["city"],
         warehouse_type=row_typed["warehouse_type"],
+        metrics=metrics_model,
     )

@@ -111,6 +111,16 @@ metrics:
   }
 }
 
+Структура `metrics`:
+
+* count
+* sum
+* by_status:
+        * status_id
+        * status_text
+        * count
+        * sum
+
 ---
 
 ## 5. Агрегация
@@ -118,6 +128,11 @@ metrics:
 ### 5.1 Основной запрос
 
 GROUP BY status_id
+
+Используется один SQL-запрос для получения:
+
+* распределения по статусам (`by_status`)
+* total-метрик (`count`, `sum`)
 
 ---
 
@@ -132,6 +147,9 @@ GROUP BY status_id
 
 COUNT(*) OVER ()  
 SUM(quantity) OVER ()  
+
+Window functions используются в этом же запросе,
+без дополнительных SQL-вызовов.
 
 ---
 
@@ -279,7 +297,7 @@ window.open("/api/.../batches.csv")
 |-----|--------|
 | Backend metadata | ✔ |
 | Swagger + типизация | ✔ |
-| Backend агрегаты | ⏳ |
+| Backend агрегаты | ✔ |
 | CSV endpoint | ⏳ |
 | Frontend | ⏳ |
 
