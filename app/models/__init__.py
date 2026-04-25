@@ -13,7 +13,6 @@ from .enums import WarehouseStatus, ShipmentStatus
 # основные доменные модели
 from .warehouse import Warehouse
 from .shipment import Shipment
-from .shipments_now import ShipmentsNow
 
 # витрины / проекции
 from .map_warehouse import MapWarehouse
@@ -28,7 +27,6 @@ __all__ = [
     # core models
     "Warehouse",
     "Shipment",
-    "ShipmentsNow",
 
     # map projection
     "MapWarehouse",
