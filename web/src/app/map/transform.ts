@@ -29,8 +29,6 @@ export function toWarehousesGeoJson(
   return {
     type: "FeatureCollection",
     features: warehouses.map((warehouse) => {
-      console.log("WAREHOUSE TRANSFORM:", warehouse);
-
       const feature: GeoJSON.Feature<
         GeoJSON.Point,
         {
@@ -56,7 +54,6 @@ export function toWarehousesGeoJson(
         },
       };
 
-      console.log("FEATURE PROPS:", feature.properties);
       return feature;
     }),
   };

@@ -101,17 +101,12 @@ export class MapFacade {
     addWarehouseLayers(this.map);
 
     this.map.on("click", "warehouses-layer", async (e) => {
-      console.log("CLICK WORKS", e);
-      console.log("FULL FEATURE:", e.features?.[0]);
-
       const f = e.features?.[0];
       if (!f) return;
 
       const props = f.properties ?? {};
-      console.log("PROPS:", props);
 
       const warehouseId = String(props.id ?? "").trim();
-      console.log("WAREHOUSE_ID:", warehouseId);
 
       if (!warehouseId) return;
 
