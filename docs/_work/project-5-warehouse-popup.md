@@ -309,6 +309,16 @@ window.open("/api/.../batches.csv")
 
 ---
 
+### 8.6 CSV кнопка (добавлено)
+
+* в popup добавлена кнопка "Скачать CSV"
+* используется `window.open`
+* URL:
+        `/api/analytics/warehouse/{warehouse_id}/batches.csv`
+* скачивание происходит напрямую через браузер
+
+---
+
 ## 9. Ограничения
 
 1. Нет кеширования
@@ -339,7 +349,7 @@ window.open("/api/.../batches.csv")
 | CSV endpoint | ✔ |
 | Frontend (базовый popup) | ✔ |
 | Frontend UI | ✔ |
-| CSV кнопка | ⏳ |
+| CSV кнопка | ✔ |
 
 ---
 
@@ -350,5 +360,8 @@ Project №5 добавляет:
 * полноценный popup склада
 * агрегированную аналитику
 * экспорт данных (CSV)
+* popup полностью функционален
+* реализован drill-down до уровня партий (через CSV)
+* frontend и backend полностью интегрированы
 
 Без нарушения архитектуры Project №2 и Project №3.

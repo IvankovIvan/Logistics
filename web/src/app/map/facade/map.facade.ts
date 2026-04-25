@@ -156,9 +156,16 @@ export class MapFacade {
             <div>Партии: ${Number(data.metrics.count)}</div>
             <div>Объём: ${Number(data.metrics.sum)}</div>
             ${statusesHtml}
+            <button id="download-csv">Скачать CSV</button>
           `;
 
           popup.setHTML(html);
+
+          const btn = document.getElementById("download-csv");
+          btn?.addEventListener("click", () => {
+            window.open(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
+          });
+
           return;
         }
 
