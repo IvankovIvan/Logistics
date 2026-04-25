@@ -21,16 +21,6 @@ services:
                                      # Старт FastAPI (dev-режим)
     environment:
       PYTHONPATH: /
-      # ------------------------------------------------
-      # Переменные БД и Redis
-      # ⚠️ Пока НЕ используются кодом
-      # Добавлены заранее под Project №1.1
-      # ------------------------------------------------
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: logistics
-      POSTGRES_USER: logistics
-      POSTGRES_PASSWORD: logistics
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
