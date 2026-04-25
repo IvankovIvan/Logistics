@@ -11,10 +11,13 @@ HTTP-роутер для карты Project #3 (analytics layer).
 
 from __future__ import annotations
 
+import csv
+import io
 import logging
 from typing import TypedDict, cast
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from app.models.analytics.warehouse_metadata import (
     AnalyticsWarehouseMetadata,
     AnalyticsWarehouseMetrics,
@@ -22,6 +25,7 @@ from app.models.analytics.warehouse_metadata import (
 )
 
 from app.services.analytics_map_builder import (
+    get_analytics_warehouse_batches,
     build_analytics_map_warehouses,
     get_analytics_warehouse_metrics,
     get_analytics_warehouse_metadata,
@@ -45,6 +49,14 @@ class _WarehouseMetricRow(TypedDict):
     sum: int
     total_count: int
     total_sum: int
+
+
+class _WarehouseBatchRow(TypedDict):
+    batch_id: int
+    status_id: int
+    quantity: int
+    warehouse_id: int
+    last_event_time: object
 
 router = APIRouter(
     prefix="/api/analytics",
@@ -142,4 +154,49 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
         city=row_typed["city"],
         warehouse_type=row_typed["warehouse_type"],
         metrics=metrics_model,
+    )
+
+
+@router.get(
+    "/warehouse/{warehouse_id}/batches.csv",
+    status_code=status.HTTP_200_OK,
+    summary="Export warehouse batches CSV",
+    description="Скачивание CSV со списком партий склада",
+)
+def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingResponse:
+    rows = get_analytics_warehouse_batches(warehouse_id)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "batch_id",
+        "status_id",
+        "quantity",
+        "warehouse_id",
+        "last_event_time",
+    ])
+
+    for row in rows:
+        row_typed = cast(_WarehouseBatchRow, row)
+        writer.writerow(
+            [
+                row_typed["batch_id"],
+                row_typed["status_id"],
+                row_typed["quantity"],
+                row_typed["warehouse_id"],
+                row_typed["last_event_time"],
+            ]
+        )
+
+    headers = {
+        "Content-Disposition": (
+            f'attachment; filename="warehouse_{warehouse_id}_batches.csv"'
+        )
+    }
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers=headers,
     )

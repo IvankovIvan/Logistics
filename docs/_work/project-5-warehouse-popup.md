@@ -208,6 +208,13 @@ by_status = []
 
 ## 7. CSV Export API
 
+Реализовано:
+
+* endpoint `GET /api/analytics/warehouse/{warehouse_id}/batches.csv` уже реализован
+* данные читаются из `analytics.current_batch_state`
+* используется один SQL-запрос
+* сортировка: `ORDER BY last_event_time DESC`
+
 ### 7.1 Endpoint
 
 GET /api/analytics/warehouse/{warehouse_id}/batches.csv
@@ -244,6 +251,13 @@ Content-Disposition: attachment
 * потоковая отдача (stream)
 * без промежуточного хранения
 * без дополнительной логики
+
+Техническая реализация:
+
+* используется `csv.writer`
+* используется `io.StringIO`
+* используется `StreamingResponse`
+* ответ отдаётся как поток (stream)
 
 ---
 
@@ -298,7 +312,7 @@ window.open("/api/.../batches.csv")
 | Backend metadata | ✔ |
 | Swagger + типизация | ✔ |
 | Backend агрегаты | ✔ |
-| CSV endpoint | ⏳ |
+| CSV endpoint | ✔ |
 | Frontend | ⏳ |
 
 ---

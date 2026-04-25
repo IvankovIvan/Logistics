@@ -118,6 +118,19 @@ ORDER BY sum DESC;
 """
 
 
+SELECT_WAREHOUSE_BATCHES = """
+SELECT
+    batch_id,
+    status_id,
+    quantity,
+    warehouse_id,
+    last_event_time
+FROM analytics.current_batch_state
+WHERE warehouse_id = %(warehouse_id)s
+ORDER BY last_event_time DESC;
+"""
+
+
 def _as_mapping(row: Any) -> Mapping[str, Any]:
     """
     Приводит строку курсора к Mapping.
@@ -278,6 +291,33 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[dict[str, object]
                 "sum": int(row["sum"] or 0),
                 "total_count": int(row["total_count"] or 0),
                 "total_sum": int(row["total_sum"] or 0),
+            }
+        )
+
+    return result
+
+
+def get_analytics_warehouse_batches(warehouse_id: int) -> list[dict[str, object]]:
+    """Возвращает список партий склада для CSV выгрузки."""
+
+    with get_analytics_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                SELECT_WAREHOUSE_BATCHES,
+                {"warehouse_id": warehouse_id},
+            )
+            raw_rows = cur.fetchall()
+
+    result: list[dict[str, object]] = []
+    for raw_row in raw_rows:
+        row = _as_mapping(raw_row)
+        result.append(
+            {
+                "batch_id": int(row["batch_id"]),
+                "status_id": int(row["status_id"]),
+                "quantity": int(row["quantity"]),
+                "warehouse_id": int(row["warehouse_id"]),
+                "last_event_time": row["last_event_time"],
             }
         )
 
