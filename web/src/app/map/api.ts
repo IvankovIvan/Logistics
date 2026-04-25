@@ -8,6 +8,7 @@
 // - optional AbortSignal нужен для polling/abort-protection
 
 export type MapWarehouse = {
+  warehouse_id: number;
   id: string;
   name: string;
   status: string;

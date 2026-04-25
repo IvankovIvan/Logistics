@@ -1,3 +1,4 @@
+// /opt/Logistics/web/src/app/map/transform.ts
 // Module: pure transformations from API data to GeoJSON/bounds for the map.
 //
 // Инварианты:
@@ -18,6 +19,7 @@ export function toWarehousesGeoJson(
   GeoJSON.Point,
   {
     id: string;
+    warehouse_id: string;
     name: string;
     status: string;
     total: number;
@@ -26,19 +28,37 @@ export function toWarehousesGeoJson(
 > {
   return {
     type: "FeatureCollection",
-    features: warehouses.map((w) => ({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [w.lon, w.lat] },
-      properties: {
-        id: w.id,
-        name: w.name,
-        status: w.status,
-        total: w.metrics.total,
-        status_text: w.metrics.by_status
-          .map((s) => `${s.status_id}:${s.quantity}`)
-          .join(","),
-      },
-    })),
+    features: warehouses.map((warehouse) => {
+      console.log("WAREHOUSE TRANSFORM:", warehouse);
+
+      const feature: GeoJSON.Feature<
+        GeoJSON.Point,
+        {
+          id: string;
+          warehouse_id: string;
+          name: string;
+          status: string;
+          total: number;
+          status_text: string;
+        }
+      > = {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [warehouse.lon, warehouse.lat] },
+        properties: {
+          id: String(warehouse.warehouse_id),
+          warehouse_id: String(warehouse.warehouse_id),
+          name: warehouse.name,
+          status: warehouse.status,
+          total: warehouse.metrics.total,
+          status_text: warehouse.metrics.by_status
+            .map((s) => `${s.status_id}:${s.quantity}`)
+            .join(","),
+        },
+      };
+
+      console.log("FEATURE PROPS:", feature.properties);
+      return feature;
+    }),
   };
 }
 

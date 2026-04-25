@@ -100,25 +100,45 @@ export class MapFacade {
     addRouteLayers(this.map);
     addWarehouseLayers(this.map);
 
-    this.map.on("click", "warehouses-layer", (e) => {
+    this.map.on("click", "warehouses-layer", async (e) => {
+      console.log("CLICK WORKS", e);
+      console.log("FULL FEATURE:", e.features?.[0]);
+
       const f = e.features?.[0];
       if (!f) return;
 
       const props = f.properties ?? {};
-      const formattedStatus = String(props.status_text ?? "нет данных")
-        .split(",")
-        .map((s) => s.replace(":", ": "))
-        .join("<br>");
+      console.log("PROPS:", props);
+
+      const warehouseId = String(props.id ?? "").trim();
+      console.log("WAREHOUSE_ID:", warehouseId);
+
+      if (!warehouseId) return;
 
       const [lon, lat] = (f.geometry as GeoJSON.Point).coordinates;
 
-      new maplibregl.Popup()
+      const popup = new maplibregl.Popup()
         .setLngLat([lon, lat])
-        .setHTML(`<b>Склад:</b> ${String(props.name ?? "")}<br>
-      <b>Всего:</b> ${String(props.total ?? 0)}<br><br>
-      <b>Статусы:</b><br>
-      ${formattedStatus}`)
         .addTo(this.map);
+
+      try {
+        const response = await fetch(`/api/analytics/warehouse/${warehouseId}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          popup.setHTML(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+          return;
+        }
+
+        if (response.status === 404) {
+          popup.setHTML("Склад не существует");
+          return;
+        }
+
+        popup.setHTML("Ошибка загрузки данных");
+      } catch {
+        popup.setHTML("Ошибка загрузки данных");
+      }
     });
     
 

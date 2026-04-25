@@ -285,6 +285,16 @@ window.open("/api/.../batches.csv")
 
 ---
 
+### 8.4 Popup загрузка данных (добавлено)
+
+* при клике по складу выполняется:
+        `GET /api/analytics/warehouse/{warehouse_id}`
+* данные отображаются в popup
+* используется `setHTML`
+* временно отображается JSON через `<pre>`
+
+---
+
 ## 9. Ограничения
 
 1. Нет кеширования
@@ -313,7 +323,8 @@ window.open("/api/.../batches.csv")
 | Swagger + типизация | ✔ |
 | Backend агрегаты | ✔ |
 | CSV endpoint | ✔ |
-| Frontend | ⏳ |
+| Frontend (базовый popup) | ✔ |
+| Frontend UI | ⏳ |
 
 ---
 
