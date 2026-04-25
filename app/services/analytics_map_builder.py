@@ -100,21 +100,42 @@ WHERE w.warehouse_id = %(warehouse_id)s;
 
 
 SELECT_WAREHOUSE_METRICS = """
+WITH base AS (
+    SELECT
+        status_id,
+        quantity
+    FROM analytics.current_batch_state
+    WHERE warehouse_id = %(warehouse_id)s
+),
+
+totals AS (
+    SELECT
+        COUNT(*) AS total_count,
+        SUM(quantity) AS total_sum
+    FROM base
+),
+
+by_status AS (
+    SELECT
+        b.status_id,
+        COUNT(*) AS count,
+        SUM(b.quantity) AS sum
+    FROM base b
+    GROUP BY b.status_id
+)
+
 SELECT
-    s.status_id,
-    d.code AS status_text,
-    COUNT(*) AS count,
-    SUM(s.quantity) AS sum,
-    COUNT(*) OVER () AS total_count,
-    SUM(SUM(s.quantity)) OVER () AS total_sum
-FROM analytics.current_batch_state s
+    bs.status_id,
+    d.description AS status_text,
+    bs.count,
+    bs.sum,
+    t.total_count,
+    t.total_sum
+FROM by_status bs
 LEFT JOIN analytics.status_dict d
-    ON d.status_id = s.status_id
-WHERE s.warehouse_id = %(warehouse_id)s
-GROUP BY
-    s.status_id,
-    d.code
-ORDER BY sum DESC;
+    ON d.status_id = bs.status_id
+CROSS JOIN totals t
+ORDER BY bs.sum DESC;
 """
 
 

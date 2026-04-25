@@ -147,9 +147,9 @@ export class MapFacade {
 
           const html = `
             <h3>${String(data.name)}</h3>
-            <div>ID: ${Number(data.warehouse_id)}</div>
-            <div>Партии: ${Number(data.metrics.count)}</div>
-            <div>Объём: ${Number(data.metrics.sum)}</div>
+            <div>Номер: ${Number(data.warehouse_id)}</div>
+            <div>Баркодов: ${Number(data.metrics.count)}</div>
+            <div>Общее кол-во: ${Number(data.metrics.sum)}</div>
             ${statusesHtml}
             <button id="download-csv">Скачать CSV</button>
           `;
