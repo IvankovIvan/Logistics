@@ -120,7 +120,7 @@ def run() -> None:
             # split используется для изоляции битых событий внутри chunk
             for chunk in chunked(batch, CHUNK_SIZE):
                 process_chunk(chunk)
-                print("chunk processed:", len(chunk))
+                # print("chunk processed:", len(chunk))
 
             # --- обновление cursor ---
             # важно: cursor двигается ТОЛЬКО после успешной отправки
