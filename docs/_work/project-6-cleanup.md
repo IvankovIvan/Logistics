@@ -148,6 +148,7 @@ Project №1 удаляется полностью.
 | Step 1 — Router | ✔ |
 | Step 2 — Router | ✔ |
 | Step 2 — Service | ⏳ |
+| Step 3 — Service | ✔ |
 | Step 3 — DataSource | ⏳ |
 | Step 4 — Ingest | ⏳ |
 | Step 5 — Database | ⏳ |
