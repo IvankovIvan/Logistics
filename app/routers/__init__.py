@@ -6,7 +6,6 @@ main.py должен импортировать роутеры ТОЛЬКО от
 
 from .warehouses import router as warehouses_router
 from .shipments import router as shipments_router
-from .ingest import router as ingest_router
 from .analytics_ingest import router as analytics_ingest_router
 from .analytics_map import router as analytics_map_router
 
