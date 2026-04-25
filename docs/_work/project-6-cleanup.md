@@ -146,6 +146,7 @@ Project №1 удаляется полностью.
 | Аудит кода | ✔ |
 | Анализ Project №1 | ✔ |
 | Step 1 — Router | ✔ |
+| Step 2 — Router | ✔ |
 | Step 2 — Service | ⏳ |
 | Step 3 — DataSource | ⏳ |
 | Step 4 — Ingest | ⏳ |
