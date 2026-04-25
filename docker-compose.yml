@@ -88,30 +88,30 @@ services:
   # ---------------------------------------------------
   # 4️⃣ Database: PostgreSQL + PostGIS
   # ---------------------------------------------------
-  postgres:
-    image: postgis/postgis:16-3.4
-                                     # PostgreSQL 16 + PostGIS
-                                     # Будет использоваться как current-state DB
-    environment:
-      POSTGRES_DB: logistics
-      POSTGRES_USER: logistics
-      POSTGRES_PASSWORD: logistics
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-                                     # Persist данные БД между перезапусками
-    ports:
-      - "5432:5432"                  # Проброс порта для локального подключения (psql, IDE)
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U logistics -d logistics"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+  # postgres:
+  #   image: postgis/postgis:16-3.4
+  #                                    # PostgreSQL 16 + PostGIS
+  #                                    # Будет использоваться как current-state DB
+  #   environment:
+  #     POSTGRES_DB: logistics
+  #     POSTGRES_USER: logistics
+  #     POSTGRES_PASSWORD: logistics
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  #                                    # Persist данные БД между перезапусками
+  #   ports:
+  #     - "5432:5432"                  # Проброс порта для локального подключения (psql, IDE)
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "pg_isready -U logistics -d logistics"
+  #       ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
 
   # ---------------------------------------------------
   # 5️⃣ Redis (будущий broker / backend для Celery)
