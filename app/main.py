@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from routers import (
     analytics_ingest_router,
     analytics_map_router,
-    ingest_router,
+    # ingest_router,
     # map_router,
     shipments_router,
     warehouses_router,
@@ -41,7 +41,7 @@ def health():
 # map_router, ingest_router, analytics_ingest_router и analytics_map_router
 # УЖЕ имеют prefix="/api"
 # app.include_router(map_router)
-app.include_router(ingest_router)
+# app.include_router(ingest_router)
 app.include_router(analytics_ingest_router)
 app.include_router(analytics_map_router)
 
