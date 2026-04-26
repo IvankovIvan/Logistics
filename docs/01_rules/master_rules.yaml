@@ -1,0 +1,140 @@
+version: 1
+
+language:
+  required: "ru"
+  rules:
+    - "Все ответы, комментарии и тексты — на русском языке"
+    - "Код допускается на любом языке, но комментарии к коду — на русском"
+    - "Не использовать английский вне кода"
+    - "Если пользователь пишет не на русском — всё равно отвечать на русском"
+
+roles:
+  chatgpt:
+    - "архитектор"
+    - "системный аналитик"
+    - "контролёр качества"
+  copilot:
+    - "исполнитель кода"
+
+process:
+  states:
+    - DISCUSSION
+    - LOCKED
+    - IMPLEMENTATION
+
+  flow:
+    - DISCUSSION
+    - CONVERGENCE
+    - FIX_IN_MD
+    - STEP
+    - CODE
+    - AUDIT
+    - DOD
+    - COMMIT
+
+  rules:
+    - "Сначала обсуждение → потом файл → потом код"
+    - "Без состояния LOCKED запрещено создавать project-X.md"
+    - "Всегда только одно активное решение"
+    - "Любое решение фиксируется в md"
+
+discussion:
+  exploration:
+    allowed: true
+    max_options: 3
+    rules:
+      - "Можно предлагать несколько вариантов"
+      - "Каждый вариант должен быть чётко описан"
+
+  convergence:
+    required: true
+    rules:
+      - "Обязательно выбрать один вариант"
+      - "После выбора альтернативы запрещены"
+
+  lock_condition:
+    required_user_confirmation: true
+    accepted_phrases:
+      - "фиксируем"
+      - "да, мы всё обсудили"
+
+project_creation:
+  allowed_only_if_state: "LOCKED"
+  location: "docs/_work/project-X.md"
+  required_fields:
+    - "цель"
+    - "архитектура"
+    - "источники данных"
+    - "API контракт"
+    - "ограничения"
+    - "инварианты"
+
+architecture:
+  layers:
+    - router
+    - service
+    - repository
+    - mapper
+
+  rules:
+    - "SQL только в repository"
+    - "router только HTTP"
+    - "service без SQL"
+    - "mapper преобразует dict → Pydantic"
+
+typing:
+  rules:
+    - "Запрещено использовать object"
+    - "Запрещено использовать Any без причины"
+    - "Все данные приводятся к типам"
+
+api:
+  requirements:
+    - "response_model обязателен"
+    - "используются Pydantic модели"
+    - "есть summary и description"
+
+documentation:
+  rules:
+    - "Сначала изменение в md → потом код"
+    - "Без записи в md решение не существует"
+
+workflow:
+  step_cycle:
+    - STEP
+    - VERIFY
+    - UPDATE_MD
+    - COMMIT
+
+  commit_rules:
+    - "Каждый шаг = отдельный commit"
+    - "Коммиты на русском языке"
+    - "Описание: что сделано, как, архитектура"
+
+audit:
+  required: true
+  rules:
+    - "Проверка перед commit обязательна"
+    - "Нельзя коммитить без audit"
+
+dod:
+  required: true
+  conditions:
+    - "код работает"
+    - "Swagger корректен"
+    - "md обновлён"
+    - "commit сделан"
+
+forbidden:
+  - "писать код до завершения обсуждения"
+  - "создавать project-X.md без подтверждения"
+  - "менять код без обновления документации"
+  - "реализовывать несколько решений одновременно"
+  - "добавлять лишний функционал вне шага"
+
+priority:
+  order:
+    - "process"
+    - "rules"
+    - "standards"
+    - "projects"
