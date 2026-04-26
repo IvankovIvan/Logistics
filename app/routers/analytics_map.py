@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -174,15 +175,15 @@ def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingRespon
 
     for row in rows:
         row_typed = row  # уже типизировано в service
-        writer.writerow(
-            [
-                row_typed["batch_id"],
-                row_typed["status_id"],
-                row_typed["quantity"],
-                row_typed["warehouse_id"],
-                row_typed["last_event_time"],
-            ]
-        )
+        value: datetime | None = row_typed["last_event_time"]
+
+        writer.writerow([
+            row_typed["batch_id"],
+            row_typed["status_id"],
+            row_typed["quantity"],
+            row_typed["warehouse_id"],
+            value.isoformat() if value else "",
+        ])
 
     headers = {
         "Content-Disposition": (

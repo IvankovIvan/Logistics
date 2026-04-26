@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TypedDict
 
 from app.repositories.warehouse_repository import (
@@ -33,7 +34,7 @@ class WarehouseBatchRow(TypedDict):
     status_id: int
     quantity: int
     warehouse_id: int
-    last_event_time: object
+    last_event_time: datetime | None
 
 
 def get_analytics_warehouse_metadata(
@@ -73,17 +74,23 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[WarehouseMetricRo
 
     rows = [_as_mapping(raw_row) for raw_row in raw_rows]
 
-    return [
-        {
-            "status_id": int(row["status_id"]),
-            "status_text": str(row["status_text"]),
-            "count": int(row["count"]),
-            "sum": int(row["sum"]),
-            "total_count": int(row["total_count"]),
-            "total_sum": int(row["total_sum"]),
-        }
-        for row in rows
-    ]
+    result: list[WarehouseMetricRow] = []
+
+    for row in rows:
+        status_text = row["status_text"] or ""
+
+        result.append(
+            {
+                "status_id": int(row["status_id"]),
+                "status_text": str(status_text),
+                "count": int(row["count"]),
+                "sum": int(row["sum"]),
+                "total_count": int(row["total_count"]),
+                "total_sum": int(row["total_sum"]),
+            }
+        )
+
+    return result
 
 
 def get_analytics_warehouse_batches(warehouse_id: int) -> list[WarehouseBatchRow]:
