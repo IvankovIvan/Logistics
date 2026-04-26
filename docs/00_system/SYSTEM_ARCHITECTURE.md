@@ -389,6 +389,12 @@ docs находятся в:
 
 ---
 
+## 1.1 Docker Service Mapping (обязательно)
+
+(вставить mapping как выше)
+
+---
+
 ## 2. Ports
 
 - backend: http://localhost:8000
