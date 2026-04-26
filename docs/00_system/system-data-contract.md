@@ -44,6 +44,7 @@ analytics.inventory_status_events
 - status_reason_id: int
 - quantity: bigint
 - event_time: timestamptz (UTC)
+- planned_departure_time: timestamptz | null
 - source_system: int
 - operation_id: bigint
 
@@ -69,6 +70,7 @@ analytics.current_batch_state
 - quantity: bigint
 - source_location_id: bigint | null
 - destination_location_id: bigint | null
+- planned_departure_time: timestamptz | null
 - last_event_time: timestamptz (UTC)
 
 Инварианты:

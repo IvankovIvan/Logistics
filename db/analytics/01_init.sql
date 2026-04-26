@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS analytics.inventory_status_events (
     status_reason_id INT NOT NULL,
     quantity BIGINT NOT NULL CHECK (quantity > 0),
     event_time TIMESTAMPTZ NOT NULL,
+    planned_departure_time TIMESTAMPTZ,
     ingest_time TIMESTAMPTZ NOT NULL DEFAULT now(),
     source_system INT NOT NULL,
     operation_id BIGINT NOT NULL,
@@ -124,6 +125,7 @@ CREATE TABLE IF NOT EXISTS analytics.current_batch_state (
     quantity BIGINT NOT NULL,
     source_location_id BIGINT,
     destination_location_id BIGINT,
+    planned_departure_time TIMESTAMPTZ,
     last_event_time TIMESTAMPTZ NOT NULL
 );
 
