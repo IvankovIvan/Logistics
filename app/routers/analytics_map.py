@@ -14,7 +14,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from typing import TypedDict, cast
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -41,30 +41,6 @@ from app.services.analytics.map.service import (
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class _WarehouseRow(TypedDict):
-    warehouse_id: int
-    name: str
-    city: str
-    warehouse_type: str
-
-
-class _WarehouseMetricRow(TypedDict):
-    status_id: int
-    status_text: str
-    count: int
-    sum: int
-    total_count: int
-    total_sum: int
-
-
-class _WarehouseBatchRow(TypedDict):
-    batch_id: int
-    status_id: int
-    quantity: int
-    warehouse_id: int
-    last_event_time: object
 
 router = APIRouter(
     prefix="/api/analytics",
@@ -152,12 +128,12 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
             detail="Warehouse not found",
         )
 
-    row_typed = cast(_WarehouseRow, row)
+    row_typed: dict[str, Any] = row
 
     metric_rows = get_analytics_warehouse_metrics(warehouse_id)
 
     if metric_rows:
-        first_metric_row = cast(_WarehouseMetricRow, metric_rows[0])
+        first_metric_row: dict[str, Any] = metric_rows[0]
         total_count = int(first_metric_row["total_count"])
         total_sum = int(first_metric_row["total_sum"])
     else:
@@ -166,7 +142,7 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
 
     by_status: list[AnalyticsWarehouseStatus] = []
     for metric_row in metric_rows:
-        metric_row_typed = cast(_WarehouseMetricRow, metric_row)
+        metric_row_typed: dict[str, Any] = metric_row
         by_status.append(
             AnalyticsWarehouseStatus(
                 status_id=int(metric_row_typed["status_id"]),
@@ -212,7 +188,7 @@ def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingRespon
     ])
 
     for row in rows:
-        row_typed = cast(_WarehouseBatchRow, row)
+        row_typed: dict[str, Any] = row
         writer.writerow(
             [
                 row_typed["batch_id"],
