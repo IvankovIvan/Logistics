@@ -193,6 +193,19 @@ map click → popup API → CSV export
 
 ## 8. API слой
 
+Backend слой:
+
+router  
+→ service  
+→ repository  
+→ DB
+
+Пояснение:
+
+- repository (query layer) отвечает за доступ к данным
+- service содержит только orchestration
+- SQL не находится в service
+
 ### Map API
 
 GET /api/analytics/map
@@ -214,6 +227,30 @@ GET /api/analytics/warehouse/{warehouse_id}/batches.csv
 ### Ingest API
 
 POST /api/analytics/ingest/events
+
+---
+
+### Frontend слой
+
+Frontend архитектура:
+
+component  
+→ facade  
+→ API layer  
+→ backend
+
+Где:
+
+- component — UI слой (React)
+- facade — orchestration, не делает HTTP
+- API layer — все HTTP вызовы (fetch/axios)
+- backend — FastAPI
+
+Инварианты:
+
+- fetch не используется вне API layer
+- facade не делает HTTP
+- все API вызовы централизованы
 
 ---
 
@@ -285,3 +322,22 @@ POST /api/analytics/ingest/events
 
 Система построена как единое целое,
 без нарушения принципов между проектами.
+
+---
+
+## Data Contract
+
+Система использует единый контракт данных:
+
+см. system-data-contract.md
+
+Контракт определяет:
+- структуру данных
+- типы полей
+- инварианты
+- API формат
+
+Является источником истины для:
+- backend
+- frontend
+- ingestion pipeline
