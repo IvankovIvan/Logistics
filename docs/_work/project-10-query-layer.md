@@ -173,3 +173,23 @@ app/repositories/
 Результат:
 - service очищен от SQL
 - код становится читаемым
+
+---
+
+## Step 4 — Rebuild repository
+
+Цель:
+- вынести rebuild SQL в repository слой
+- отделить процедуру восстановления snapshot от orchestration
+
+Проблема:
+- rebuild содержит сложный SQL прямо в service
+- сложно читать и поддерживать
+
+Решение:
+- SQL переносится в rebuild_repository
+- service управляет только транзакцией и вызовами
+
+Результат:
+- чистая архитектура
+- понятный rebuild pipeline
