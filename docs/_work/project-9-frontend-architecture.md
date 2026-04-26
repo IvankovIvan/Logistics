@@ -65,7 +65,7 @@ frontend component
 
 - используется: да
 - API: /api/analytics/warehouse/{id}
-- вызов: прямой fetch (проблема)
+- вызов: через api layer
 
 ---
 
@@ -73,7 +73,7 @@ frontend component
 
 - используется: да
 - API: /api/analytics/warehouse/{id}/batches.csv
-- вызов: window.open (проблема)
+- вызов: fetch + blob через api layer
 
 ---
 
@@ -83,7 +83,7 @@ frontend component
 - типизация частично отсутствует
 - используется inline `as {...}`
 - facade смешивает ответственность
-- CSV вне архитектуры
+- CSV интеграция требует финальной верификации
 
 ---
 
