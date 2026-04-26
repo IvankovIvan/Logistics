@@ -87,3 +87,59 @@ raise HTTPException(
 - API не зависит от DB структуры
 - API не возвращает внутренние модели
 - API стабилен для frontend
+
+## 10. Project-specific constraints (обязательно)
+
+### 10.1 DB → API типизация
+
+- Данные из repository считаются "грязными"
+- Все поля должны явно приводиться:
+  - int(...)
+  - str(...)
+  - float(...)
+- Запрещено напрямую передавать значения из БД в модели
+
+---
+
+### 10.2 Datetime
+
+- Значения datetime из БД могут быть null
+- Перед использованием обязательно:
+
+    value.isoformat() if value else ""
+
+---
+
+### 10.3 Service vs Model
+
+- Запрещено смешивать модели:
+  - app.services.* → внутренние структуры
+  - app.models.* → API контракт
+
+- Нельзя передавать service-модель в response_model
+
+---
+
+### 10.4 Mapper contract
+
+- Mapper обязан возвращать строго Pydantic модель
+- Mapper принимает raw dict из repository
+
+Тип mapper:
+
+    def to_map_warehouse(data: dict) -> MapWarehouse
+
+---
+
+### 10.5 Router input
+
+- Router не работает с raw dict
+- Router принимает уже подготовленные данные (через mapper)
+
+---
+
+### 10.6 CSV export
+
+- Все значения должны быть сериализованы явно
+- datetime → isoformat
+- null → пустая строка
