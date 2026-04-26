@@ -209,3 +209,44 @@ app/services — основной слой бизнес-логики
 
 #### consistency_check.py
 - проверяет корректность snapshot после rebuild
+
+## 7.3 Workers (фоновые процессы)
+
+app/workers — слой фоновой обработки данных
+
+Назначение:
+- выполняет batch обработку
+- обновляет snapshot
+- реализует ingestion pipeline
+
+---
+
+### analytics_worker.py
+
+- основной worker аналитики
+- читает события из event store
+- обновляет current_batch_state
+- поддерживает консистентность snapshot
+
+---
+
+### mssql_extractor/
+
+#### main.py
+- основной цикл extractor
+- управляет fetch → send → retry
+
+#### mssql.py
+- получение данных из MS SQL
+
+#### api.py
+- отправка batch в ingest API
+
+#### postgres.py
+- работа с ingest_cursor
+
+#### config.py
+- конфигурация extractor (env переменные)
+
+#### dlq.py
+- обработка и сохранение ошибок (Dead Letter Queue)
