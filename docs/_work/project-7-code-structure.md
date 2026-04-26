@@ -250,3 +250,67 @@ app/workers — слой фоновой обработки данных
 
 #### dlq.py
 - обработка и сохранение ошибок (Dead Letter Queue)
+
+## 7.4 Models (структуры данных)
+
+app/models — слой описания данных
+
+Назначение:
+- определяет структуры данных (Pydantic модели)
+- используется для API (request / response)
+- используется внутри сервисов и worker'ов
+- обеспечивает валидацию и сериализацию
+
+---
+
+### map_response.py
+- модель ответа для карты (/api/analytics/map)
+
+### map_warehouse.py
+- модель склада для карты
+
+### map_route.py
+- модель маршрута для карты
+
+---
+
+### warehouse.py
+- доменная модель склада
+
+### shipment.py
+- доменная модель перемещения
+
+---
+
+### analytics/
+
+#### events.py
+- модели событий для ingest pipeline
+
+#### results.py
+- модели результатов обработки
+
+#### warehouse_metadata.py
+- модели метаданных склада
+
+---
+
+### ingest/
+
+#### events.py
+- модели входящих событий (request)
+
+#### results.py
+- модели ответов ingest API
+
+---
+
+### enums/
+
+#### shipment_status.py
+- статусы перемещений
+
+#### warehouse_status.py
+- статусы складов
+
+---
