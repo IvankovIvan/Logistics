@@ -92,6 +92,14 @@ class WarehouseMetricRow(TypedDict):
     total_sum: int
 
 
+class WarehouseBatchRow(TypedDict):
+    batch_id: int
+    status_id: int
+    quantity: int
+    warehouse_id: int
+    last_event_time: object
+
+
 def get_analytics_warehouse_metadata(
     warehouse_id: int,
 ) -> WarehouseRow | None:
@@ -154,7 +162,7 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[WarehouseMetricRo
     ]
 
 
-def get_analytics_warehouse_batches(warehouse_id: int) -> list[dict[str, object]]:
+def get_analytics_warehouse_batches(warehouse_id: int) -> list[WarehouseBatchRow]:
     """Возвращает список партий склада для CSV выгрузки."""
 
     with get_analytics_connection() as conn:
@@ -165,17 +173,15 @@ def get_analytics_warehouse_batches(warehouse_id: int) -> list[dict[str, object]
             )
             raw_rows = cur.fetchall()
 
-    result: list[dict[str, object]] = []
-    for raw_row in raw_rows:
-        row = _as_mapping(raw_row)
-        result.append(
-            {
-                "batch_id": int(row["batch_id"]),
-                "status_id": int(row["status_id"]),
-                "quantity": int(row["quantity"]),
-                "warehouse_id": int(row["warehouse_id"]),
-                "last_event_time": row["last_event_time"],
-            }
-        )
+    rows = [_as_mapping(raw_row) for raw_row in raw_rows]
 
-    return result
+    return [
+        {
+            "batch_id": int(row["batch_id"]),
+            "status_id": int(row["status_id"]),
+            "quantity": int(row["quantity"]),
+            "warehouse_id": int(row["warehouse_id"]),
+            "last_event_time": row["last_event_time"],
+        }
+        for row in rows
+    ]

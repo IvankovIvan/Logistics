@@ -187,7 +187,7 @@ def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingRespon
     ])
 
     for row in rows:
-        row_typed = row
+        row_typed = row  # уже типизировано в service
         writer.writerow(
             [
                 row_typed["batch_id"],
