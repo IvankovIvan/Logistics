@@ -133,3 +133,27 @@ analytics_rebuild:
 - repository слой выделен
 - service читается как бизнес-логика
 - код легко расширяется
+
+---
+
+## Step 2 — Repository layer
+
+Цель:
+- создать слой доступа к данным
+- отделить SQL от service
+
+Решение:
+- вводится папка app/repositories
+- каждый домен получает свой repository
+
+Структура:
+
+app/repositories/
+	map_repository.py
+	warehouse_repository.py
+	ingest_repository.py
+	rebuild_repository.py
+
+Результат:
+- SQL централизован
+- service упрощается

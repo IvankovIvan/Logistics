@@ -17,8 +17,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.repositories.map_repository import (
+    fetch_warehouse_metrics,
+    fetch_warehouses,
+)
 from app.services.analytics.utils import _as_mapping
-from app.services.db.connection import get_analytics_connection
 
 
 @dataclass
@@ -48,44 +51,6 @@ class AnalyticsMapWarehouse:
     metrics: WarehouseMetrics
 
 
-SELECT_WAREHOUSES = """
-SELECT
-    warehouse_id,
-    name,
-    lat,
-    lon
-FROM analytics.warehouses
-ORDER BY warehouse_id;
-"""
-
-
-SELECT_AGGREGATED_METRICS = """
-WITH aggregated AS (
-    -- Агрегация количества по складу и статусу.
-    SELECT
-        warehouse_id,
-        status_id,
-        SUM(quantity) AS total_quantity
-    FROM analytics.current_batch_state
-    GROUP BY
-        warehouse_id,
-        status_id
-)
-SELECT
-    warehouse_id,
-    status_id,
-    total_quantity,
-    -- Общий объём по складу (без разреза по статусам).
-    SUM(total_quantity) OVER (
-        PARTITION BY warehouse_id
-    ) AS warehouse_total_quantity
-FROM aggregated
-ORDER BY
-    warehouse_id,
-    status_id;
-"""
-
-
 def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
     """
     Собирает map-структуру складов из analytics.
@@ -109,15 +74,11 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
     }
     """
 
-    with get_analytics_connection() as conn:
-        with conn.cursor() as cur:
-            # 1) Справочник складов.
-            cur.execute(SELECT_WAREHOUSES)
-            warehouse_rows = cur.fetchall()
+    # 1) Справочник складов.
+    warehouse_rows = fetch_warehouses()
 
-            # 2) Агрегаты состояния по складам.
-            cur.execute(SELECT_AGGREGATED_METRICS)
-            metric_rows = cur.fetchall()
+    # 2) Агрегаты состояния по складам.
+    metric_rows = fetch_warehouse_metrics()
 
     # Индекс метрик по складу для быстрого склеивания.
     metrics_by_warehouse: dict[int, WarehouseMetrics] = {}
