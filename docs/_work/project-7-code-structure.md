@@ -146,3 +146,23 @@ app/ — основной backend проекта
 - workers — фоновая обработка (batch processing)
 - models — структуры данных (DTO, API контракты)
 - tests — тесты (если используются)
+
+## 7.1 Routers (HTTP слой)
+
+app/routers — слой API
+
+Назначение:
+- принимает HTTP запросы
+- валидирует входные данные (через Pydantic)
+- вызывает сервисы
+- возвращает response
+
+Файлы:
+
+### analytics_map.py
+- endpoint /api/analytics/map
+- возвращает агрегированные данные для карты
+
+### analytics_ingest.py
+- endpoint /api/analytics/ingest/events
+- принимает batch событий для загрузки в систему
