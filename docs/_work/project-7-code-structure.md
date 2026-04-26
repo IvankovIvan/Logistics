@@ -166,3 +166,46 @@ app/routers — слой API
 ### analytics_ingest.py
 - endpoint /api/analytics/ingest/events
 - принимает batch событий для загрузки в систему
+
+## 7.2 Services (бизнес-логика)
+
+app/services — основной слой бизнес-логики
+
+Назначение:
+- содержит обработку данных
+- выполняет SQL-запросы
+- реализует ingest pipeline
+- формирует ответы для API
+
+---
+
+### analytics_map_builder.py
+
+- строит агрегированные данные для карты
+- объединяет snapshot и справочники
+- формирует response для /api/analytics/map
+
+---
+
+### analytics_ingest/
+
+#### connection.py
+- управление подключением к Postgres
+
+#### queries.py
+- SQL-запросы для ingest pipeline
+
+#### service.py
+- основной сервис ingest
+- выполняет batch insert
+- обрабатывает idempotency и fallback
+
+---
+
+### analytics_rebuild/
+
+#### service.py
+- выполняет полный rebuild snapshot
+
+#### consistency_check.py
+- проверяет корректность snapshot после rebuild
