@@ -348,6 +348,32 @@ component
 
 ---
 
+## 0. Project Root (обязательно)
+
+Абсолютный путь проекта:
+
+	/opt/Logistics
+
+Правила:
+
+- все команды выполняются относительно этого пути
+- все ссылки в документации предполагают этот root
+- все скрипты и docker используют этот путь
+
+---
+
+Примеры:
+
+cd /opt/Logistics
+
+docker compose up --build -d
+
+docs находятся в:
+
+/opt/Logistics/docs/
+
+---
+
 ## 1. Docker Services
 
 Система запускается через docker-compose.
