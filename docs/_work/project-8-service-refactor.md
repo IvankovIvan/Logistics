@@ -422,3 +422,26 @@ router → service → db
 - service layer соответствует production-практикам
 - архитектура упрощена и читаема
 - система готова к масштабированию
+
+---
+
+## 22. Step 11 — API Contracts (map endpoint)
+
+Цель:
+- добавить строгую типизацию для /api/analytics/map
+
+Проблема:
+- endpoint возвращает dict без response_model
+- структура ответа не зафиксирована
+
+Решение:
+- вводится Pydantic модель MapResponse
+- endpoint переводится на response_model
+
+---
+
+## 23. Ожидаемый результат
+
+- Swagger показывает структуру map API
+- frontend получает стабильный контракт
+- устраняется использование dict в API

@@ -23,6 +23,12 @@ from app.models.analytics.warehouse_metadata import (
     AnalyticsWarehouseMetrics,
     AnalyticsWarehouseStatus,
 )
+from app.models.analytics_map_response import (
+    AnalyticsMapResponse,
+    MapWarehouse,
+    WarehouseMetrics,
+    StatusQuantity,
+)
 
 from app.services.analytics.warehouse.service import (
     get_analytics_warehouse_batches,
@@ -68,6 +74,7 @@ router = APIRouter(
 
 @router.get(
     "/map",
+    response_model=AnalyticsMapResponse,
     status_code=status.HTTP_200_OK,
     summary="Analytics map data (Project #3)",
     description=(
@@ -76,7 +83,7 @@ router = APIRouter(
         "- routes: пока пустой массив (V1)"
     ),
 )
-def get_analytics_map() -> dict[str, object]:
+def get_analytics_map() -> AnalyticsMapResponse:
     """
     Endpoint Project #3 карты.
 
@@ -87,11 +94,36 @@ def get_analytics_map() -> dict[str, object]:
     """
 
     try:
-        data = build_analytics_map_warehouses()
-        return {
-            "warehouses": data,
-            "routes": [],
-        }
+        raw_data = build_analytics_map_warehouses()
+
+        warehouses = []
+
+        for item in raw_data:
+            metrics = item["metrics"]
+
+            warehouses.append(
+                MapWarehouse(
+                    warehouse_id=item["warehouse_id"],
+                    name=item["name"],
+                    lat=item["lat"],
+                    lon=item["lon"],
+                    metrics=WarehouseMetrics(
+                        total=metrics["total"],
+                        by_status=[
+                            StatusQuantity(
+                                status_id=s["status_id"],
+                                quantity=s["quantity"],
+                            )
+                            for s in metrics["by_status"]
+                        ],
+                    ),
+                )
+            )
+
+        return AnalyticsMapResponse(
+            warehouses=warehouses,
+            routes=[],
+        )
     except Exception as exc:
         LOGGER.exception("Failed to build analytics map response")
         raise HTTPException(
