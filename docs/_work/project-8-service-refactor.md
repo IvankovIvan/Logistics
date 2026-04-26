@@ -491,3 +491,19 @@ router → service → db
 - router не использует dict[str, Any]
 - отсутствуют ручные преобразования типов
 - типизация централизована в service
+
+---
+
+## 28. Step 14 — Service typing (warehouse metrics)
+
+Цель:
+- убрать dict[str, Any] для метрик склада
+- перенести типизацию в service слой
+
+Подход:
+- service возвращает TypedDict для metric rows
+- router использует данные без кастов
+
+Результат:
+- упрощение router
+- повышение типобезопасности

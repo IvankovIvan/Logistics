@@ -83,6 +83,15 @@ class WarehouseRow(TypedDict):
     warehouse_type: str
 
 
+class WarehouseMetricRow(TypedDict):
+    status_id: int
+    status_text: str
+    count: int
+    sum: int
+    total_count: int
+    total_sum: int
+
+
 def get_analytics_warehouse_metadata(
     warehouse_id: int,
 ) -> WarehouseRow | None:
@@ -113,7 +122,7 @@ def get_analytics_warehouse_metadata(
     }
 
 
-def get_analytics_warehouse_metrics(warehouse_id: int) -> list[dict[str, object]]:
+def get_analytics_warehouse_metrics(warehouse_id: int) -> list[WarehouseMetricRow]:
     """
     Возвращает агрегированные метрики склада из current_batch_state.
 
@@ -130,21 +139,19 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[dict[str, object]
             )
             raw_rows = cur.fetchall()
 
-    result: list[dict[str, object]] = []
-    for raw_row in raw_rows:
-        row = _as_mapping(raw_row)
-        result.append(
-            {
-                "status_id": int(row["status_id"]),
-                "status_text": str(row["status_text"]),
-                "count": int(row["count"] or 0),
-                "sum": int(row["sum"] or 0),
-                "total_count": int(row["total_count"] or 0),
-                "total_sum": int(row["total_sum"] or 0),
-            }
-        )
+    rows = [_as_mapping(raw_row) for raw_row in raw_rows]
 
-    return result
+    return [
+        {
+            "status_id": int(row["status_id"]),
+            "status_text": str(row["status_text"]),
+            "count": int(row["count"]),
+            "sum": int(row["sum"]),
+            "total_count": int(row["total_count"]),
+            "total_sum": int(row["total_sum"]),
+        }
+        for row in rows
+    ]
 
 
 def get_analytics_warehouse_batches(warehouse_id: int) -> list[dict[str, object]]:

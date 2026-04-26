@@ -14,7 +14,6 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -133,7 +132,7 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
     metric_rows = get_analytics_warehouse_metrics(warehouse_id)
 
     if metric_rows:
-        first_metric_row: dict[str, Any] = metric_rows[0]
+        first_metric_row = metric_rows[0]
         total_count = int(first_metric_row["total_count"])
         total_sum = int(first_metric_row["total_sum"])
     else:
@@ -142,7 +141,7 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
 
     by_status: list[AnalyticsWarehouseStatus] = []
     for metric_row in metric_rows:
-        metric_row_typed: dict[str, Any] = metric_row
+        metric_row_typed = metric_row
         by_status.append(
             AnalyticsWarehouseStatus(
                 status_id=int(metric_row_typed["status_id"]),
@@ -188,7 +187,7 @@ def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingRespon
     ])
 
     for row in rows:
-        row_typed: dict[str, Any] = row
+        row_typed = row
         writer.writerow(
             [
                 row_typed["batch_id"],
