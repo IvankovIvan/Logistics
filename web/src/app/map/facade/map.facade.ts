@@ -14,6 +14,8 @@
 
 import maplibregl, { type Map, type FilterSpecification } from "maplibre-gl";
 
+import { fetchWarehouse } from "@/api/analytics";
+
 import { addMapSources, updateRouteSource } from "../sources/map.sources";
 import { addWarehouseLayers } from "../layers/warehouses.layers";
 import { addRouteLayers } from "../layers/routes.layers";
@@ -117,22 +119,9 @@ export class MapFacade {
         .addTo(this.map);
 
       try {
-        const response = await fetch(`/api/analytics/warehouse/${warehouseId}`);
+        const data = await fetchWarehouse(Number(warehouseId));
 
-        if (response.ok) {
-          const data = (await response.json()) as {
-            warehouse_id: number;
-            name: string;
-            metrics: {
-              count: number;
-              sum: number;
-              by_status: Array<{
-                status_text: string;
-                count: number;
-                sum: number;
-              }>;
-            };
-          };
+        if (data) {
 
           const byStatus = data.metrics.by_status ?? [];
           const statusesHtml =
@@ -161,11 +150,6 @@ export class MapFacade {
             window.open(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
           });
 
-          return;
-        }
-
-        if (response.status === 404) {
-          popup.setHTML("Склад не существует");
           return;
         }
 
