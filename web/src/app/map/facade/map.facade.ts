@@ -14,7 +14,9 @@
 
 import maplibregl, { type Map, type FilterSpecification } from "maplibre-gl";
 
-import { fetchWarehouse } from "@/api/analytics";
+import { fetchWarehouse, downloadWarehouseCsv } from "@/api/analytics";
+
+import { buildWarehousePopupHtml } from "./warehouse.popup";
 
 import { addMapSources, updateRouteSource } from "../sources/map.sources";
 import { addWarehouseLayers } from "../layers/warehouses.layers";
@@ -122,32 +124,11 @@ export class MapFacade {
         const data = await fetchWarehouse(Number(warehouseId));
 
         if (data) {
-
-          const byStatus = data.metrics.by_status ?? [];
-          const statusesHtml =
-            byStatus.length > 0
-              ? byStatus
-                  .map(
-                    (s) =>
-                      `<div>${String(s.status_text)} — ${Number(s.count)} / ${Number(s.sum)}</div>`
-                  )
-                  .join("")
-              : "<div>Нет данных</div>";
-
-          const html = `
-            <h3>${String(data.name)}</h3>
-            <div>Номер: ${Number(data.warehouse_id)}</div>
-            <div>Баркодов: ${Number(data.metrics.count)}</div>
-            <div>Общее кол-во: ${Number(data.metrics.sum)}</div>
-            ${statusesHtml}
-            <button id="download-csv">Скачать CSV</button>
-          `;
-
-          popup.setHTML(html);
+          popup.setHTML(buildWarehousePopupHtml(data));
 
           const btn = document.getElementById("download-csv");
           btn?.addEventListener("click", () => {
-            window.open(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
+            downloadWarehouseCsv(Number(warehouseId));
           });
 
           return;

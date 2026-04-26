@@ -17,3 +17,7 @@ export async function fetchWarehouse(
   }
   return res.json();
 }
+
+export function downloadWarehouseCsv(warehouseId: number): void {
+  window.open(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
+}
