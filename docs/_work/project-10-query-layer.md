@@ -157,3 +157,19 @@ app/repositories/
 Результат:
 - SQL централизован
 - service упрощается
+
+---
+
+## Step 3 — Warehouse repository
+
+Цель:
+- вынести SQL warehouse домена в repository
+- разделить metadata, metrics и batches
+
+Решение:
+- создаётся warehouse_repository
+- каждая функция = отдельный SQL
+
+Результат:
+- service очищен от SQL
+- код становится читаемым

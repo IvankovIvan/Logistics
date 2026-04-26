@@ -4,76 +4,12 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from app.services.analytics.utils import _as_mapping
-from app.services.db.connection import get_analytics_connection
-
-
-SELECT_WAREHOUSE_METADATA = """
-SELECT
-    w.warehouse_id,
-    w.name,
-    c.name AS city,
-    wt.name AS warehouse_type
-FROM analytics.warehouses w
-JOIN analytics.cities c
-    ON c.city_id = w.city_id
-JOIN analytics.warehouse_types wt
-    ON wt.warehouse_type_id = w.warehouse_type_id
-WHERE w.warehouse_id = %(warehouse_id)s;
-"""
-
-
-SELECT_WAREHOUSE_METRICS = """
-WITH base AS (
-    SELECT
-        status_id,
-        quantity
-    FROM analytics.current_batch_state
-    WHERE warehouse_id = %(warehouse_id)s
-),
-
-totals AS (
-    SELECT
-        COUNT(*) AS total_count,
-        SUM(quantity) AS total_sum
-    FROM base
-),
-
-by_status AS (
-    SELECT
-        b.status_id,
-        COUNT(*) AS count,
-        SUM(b.quantity) AS sum
-    FROM base b
-    GROUP BY b.status_id
+from app.repositories.warehouse_repository import (
+    fetch_warehouse_batches,
+    fetch_warehouse_metadata,
+    fetch_warehouse_metrics,
 )
-
-SELECT
-    bs.status_id,
-    d.description AS status_text,
-    bs.count,
-    bs.sum,
-    t.total_count,
-    t.total_sum
-FROM by_status bs
-LEFT JOIN analytics.status_dict d
-    ON d.status_id = bs.status_id
-CROSS JOIN totals t
-ORDER BY bs.sum DESC;
-"""
-
-
-SELECT_WAREHOUSE_BATCHES = """
-SELECT
-    batch_id,
-    status_id,
-    quantity,
-    warehouse_id,
-    last_event_time
-FROM analytics.current_batch_state
-WHERE warehouse_id = %(warehouse_id)s
-ORDER BY last_event_time DESC;
-"""
+from app.services.analytics.utils import _as_mapping
 
 
 class WarehouseRow(TypedDict):
@@ -109,13 +45,7 @@ def get_analytics_warehouse_metadata(
     Если склад не найден, возвращает None.
     """
 
-    with get_analytics_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                SELECT_WAREHOUSE_METADATA,
-                {"warehouse_id": warehouse_id},
-            )
-            raw_row = cur.fetchone()
+    raw_row = fetch_warehouse_metadata(warehouse_id)
 
     if raw_row is None:
         return None
@@ -139,13 +69,7 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[WarehouseMetricRo
     - total_count/total_sum через window functions.
     """
 
-    with get_analytics_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                SELECT_WAREHOUSE_METRICS,
-                {"warehouse_id": warehouse_id},
-            )
-            raw_rows = cur.fetchall()
+    raw_rows = fetch_warehouse_metrics(warehouse_id)
 
     rows = [_as_mapping(raw_row) for raw_row in raw_rows]
 
@@ -165,13 +89,7 @@ def get_analytics_warehouse_metrics(warehouse_id: int) -> list[WarehouseMetricRo
 def get_analytics_warehouse_batches(warehouse_id: int) -> list[WarehouseBatchRow]:
     """Возвращает список партий склада для CSV выгрузки."""
 
-    with get_analytics_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                SELECT_WAREHOUSE_BATCHES,
-                {"warehouse_id": warehouse_id},
-            )
-            raw_rows = cur.fetchall()
+    raw_rows = fetch_warehouse_batches(warehouse_id)
 
     rows = [_as_mapping(raw_row) for raw_row in raw_rows]
 
