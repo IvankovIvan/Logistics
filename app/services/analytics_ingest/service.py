@@ -57,6 +57,7 @@ EVENT_INSERT_COLUMNS = (
     "status_reason_id",
     "quantity",
     "event_time",
+    "planned_departure_time",
     "source_system",
     "operation_id",
 )
@@ -107,6 +108,7 @@ def _event_params(event: AnalyticsEvent) -> dict[str, object]:
         "status_reason_id": event.status_reason_id,
         "quantity": event.quantity,
         "event_time": event.event_time,
+        "planned_departure_time": event.planned_departure_time,
         "source_system": event.source_system,
         "operation_id": event.operation_id,
     }
@@ -150,6 +152,7 @@ def _build_batch_insert_query(events_count: int) -> sql.Composed:
             status_reason_id,
             quantity,
             event_time,
+            planned_departure_time,
             source_system,
             operation_id
         )

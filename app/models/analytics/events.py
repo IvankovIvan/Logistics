@@ -31,6 +31,7 @@ class AnalyticsEvent(BaseModel):
     status_reason_id: int = Field(..., description="ID причины статуса")
     quantity: int = Field(..., gt=0, description="Количество (> 0)")
     event_time: datetime = Field(..., description="Время события (UTC)")
+    planned_departure_time: datetime | None = Field(None, description="Плановое время отправки (nullable)")
     source_system: int = Field(..., description="Идентификатор исходной системы")
 
 

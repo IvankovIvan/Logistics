@@ -29,6 +29,7 @@ def insert_event(params, cur=None):
 		status_reason_id,
 		quantity,
 		event_time,
+		planned_departure_time,
 		source_system,
 		operation_id
 	)
@@ -43,6 +44,7 @@ def insert_event(params, cur=None):
 		%(status_reason_id)s,
 		%(quantity)s,
 		%(event_time)s,
+		%(planned_departure_time)s,
 		%(source_system)s,
 		%(operation_id)s
 	)
