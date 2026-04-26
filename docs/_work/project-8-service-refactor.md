@@ -334,3 +334,32 @@ rebuild.service → db
 - db слой централизован
 - архитектура приведена к слоистой модели
 - подготовлена база для рефакторинга router слоя
+
+---
+
+## 16. Step 8 — Router refactor
+
+Цель:
+- удалить analytics_map_builder как proxy слой
+- перевести router напрямую на map.service
+
+Изменение:
+
+было:
+router → analytics_map_builder → map.service → db
+
+станет:
+router → map.service → db
+
+Причина:
+- analytics_map_builder больше не содержит логики
+- является лишним уровнем абстракции
+- усложняет архитектуру
+
+---
+
+## 17. Ожидаемый результат
+
+- удалён последний proxy слой
+- упрощён вызов map API
+- структура соответствует router → service → db
