@@ -555,3 +555,19 @@ router → service → db
 Результат:
 - router содержит только orchestration
 - логика преобразования централизована
+
+---
+
+## 33. Step 19 — Internal models (dataclass)
+
+Цель:
+- заменить TypedDict на dataclass в service
+- повысить строгость внутренней модели
+
+Подход:
+- service возвращает dataclass
+- mapper преобразует dataclass → Pydantic
+
+Результат:
+- строгая типизация внутри системы
+- чистое разделение слоёв

@@ -15,27 +15,30 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from dataclasses import dataclass
 
 from app.services.analytics.utils import _as_mapping
 from app.services.db.connection import get_analytics_connection
 
 
-class StatusQuantity(TypedDict):
+@dataclass
+class StatusQuantity:
     """Одна строка метрики по статусу склада."""
 
     status_id: int
     quantity: int
 
 
-class WarehouseMetrics(TypedDict):
+@dataclass
+class WarehouseMetrics:
     """Агрегированные метрики склада."""
 
     total: int
     by_status: list[StatusQuantity]
 
 
-class AnalyticsMapWarehouse(TypedDict):
+@dataclass
+class AnalyticsMapWarehouse:
     """Формат одного склада для Project #3 map API."""
 
     warehouse_id: int
@@ -128,16 +131,16 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
         warehouse_total_quantity = int(row["warehouse_total_quantity"] or 0)
 
         if warehouse_id not in metrics_by_warehouse:
-            metrics_by_warehouse[warehouse_id] = {
-                "total": warehouse_total_quantity,
-                "by_status": [],
-            }
+            metrics_by_warehouse[warehouse_id] = WarehouseMetrics(
+                total=warehouse_total_quantity,
+                by_status=[],
+            )
 
-        metrics_by_warehouse[warehouse_id]["by_status"].append(
-            {
-                "status_id": status_id,
-                "quantity": quantity,
-            }
+        metrics_by_warehouse[warehouse_id].by_status.append(
+            StatusQuantity(
+                status_id=status_id,
+                quantity=quantity,
+            )
         )
 
     # Финальная сборка: НЕ теряем склады без метрик.
@@ -153,29 +156,26 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
 
         metrics = metrics_by_warehouse.get(
             warehouse_id,
-            {
-                "total": 0,
-                "by_status": [],
-            },
+            WarehouseMetrics(total=0, by_status=[]),
         )
 
         result.append(
-            {
-                "warehouse_id": int(warehouse_id),
-                "name": str(name),
-                "lat": float(lat),
-                "lon": float(lon),
-                "metrics": {
-                    "total": int(metrics["total"]),
-                    "by_status": [
-                        {
-                            "status_id": int(status["status_id"]),
-                            "quantity": int(status["quantity"]),
-                        }
-                        for status in metrics["by_status"]
+            AnalyticsMapWarehouse(
+                warehouse_id=int(warehouse_id),
+                name=str(name),
+                lat=float(lat),
+                lon=float(lon),
+                metrics=WarehouseMetrics(
+                    total=int(metrics.total),
+                    by_status=[
+                        StatusQuantity(
+                            status_id=int(status.status_id),
+                            quantity=int(status.quantity),
+                        )
+                        for status in metrics.by_status
                     ],
-                },
-            }
+                ),
+            )
         )
 
     return result
