@@ -47,7 +47,7 @@ router → service → DB
 
 ---
 
-## 4. Основные проблемы (гипотеза)
+## 4. Ограничения
 
 - services перегружены
 - нет чёткого разделения логики
@@ -121,3 +121,96 @@ router → service → DB
 - все endpoints имеют Pydantic
 - services читаются как отдельные модули
 - код предсказуем
+
+---
+
+## 8. Текущий state (Audit)
+
+### analytics_map_builder.py
+- ответственность:
+  - сборка карты
+  - metadata склада
+  - метрики склада
+  - CSV выгрузка
+- таблицы:
+  - analytics.warehouses
+  - analytics.current_batch_state
+  - analytics.cities
+  - analytics.warehouse_types
+  - analytics.status_dict
+- проблемы:
+  - большой файл (~345 строк)
+  - смешение ответственности
+  - SQL + агрегация + форматирование вместе
+  - использование dict вместо моделей
+
+---
+
+### analytics_ingest/service.py
+- ответственность:
+  - ingest pipeline
+  - batch insert
+  - fallback
+  - partition management
+- таблицы:
+  - analytics.inventory_status_events
+- проблемы:
+  - очень большой файл (~370 строк)
+  - смешение логики
+  - SQL builder внутри service
+  - dict / Mapping вместо моделей
+
+---
+
+### analytics_ingest/connection.py
+- ответственность:
+  - подключение к Postgres
+- проблемы:
+  - используется не только ingest
+  - фактически является общим DB layer
+
+---
+
+### analytics_rebuild/service.py
+- ответственность:
+  - rebuild snapshot
+- таблицы:
+  - analytics.current_batch_state
+  - analytics.inventory_status_events
+  - analytics.status_reason
+- проблемы:
+  - SQL + orchestration вместе
+
+---
+
+### analytics_rebuild/consistency_check.py
+- ответственность:
+  - проверка snapshot после rebuild
+- таблицы:
+  - analytics.current_batch_state
+- проблемы:
+  - SQL + логика проверки вместе
+  - нет моделей
+
+---
+
+### Общие проблемы
+
+- сервисы слишком крупные
+- смешение ответственности
+- слабая типизация
+- отсутствие разделения на домены
+
+---
+
+## 9. Вывод
+
+Текущий state сервисного слоя требует систематического переструктурирования:
+
+- **Сервисы перегружены** — analytics_map_builder (345 строк) и analytics_ingest/service (370 строк) смешивают SQL, логику агрегации и форматирование ответов в одном модуле
+
+- **Смешение ответственности** — каждый сервис решает слишком много задач (например, map_builder одновременно собирает карту, получает metadata, метрики и готовит CSV)
+
+- **Слабая типизация** — повсеместное использование dict[str, object] и Mapping[str, Any] вместо Pydantic моделей осложняет поддержку и интеграцию с frontend
+
+- **Структура рефакторинга определена** — план из 6 шагов (Audit → Classification → Refactor services → Models cleanup → API contracts → Verification) обеспечивает систематический переход к production-уровню с сохранением архитектурных инвариантов
