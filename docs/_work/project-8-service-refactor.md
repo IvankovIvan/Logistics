@@ -214,3 +214,87 @@ router → service → DB
 - **Слабая типизация** — повсеместное использование dict[str, object] и Mapping[str, Any] вместо Pydantic моделей осложняет поддержку и интеграцию с frontend
 
 - **Структура рефакторинга определена** — план из 6 шагов (Audit → Classification → Refactor services → Models cleanup → API contracts → Verification) обеспечивает систематический переход к production-уровню с сохранением архитектурных инвариантов
+
+---
+
+## 10. Результат Step 3 — Classification
+
+Сервисы разделены на логические домены:
+
+### Map
+- build_analytics_map_warehouses
+
+Назначение:
+- формирование данных для карты
+
+---
+
+### Warehouse (popup + CSV)
+- get_analytics_warehouse_metadata
+- get_analytics_warehouse_metrics
+- get_analytics_warehouse_batches
+
+Назначение:
+- работа с конкретным складом
+- popup данные
+- CSV выгрузка
+
+---
+
+### Ingest
+- ingest_analytics_events
+- _add_months
+- _month_start_utc
+- _event_params
+- _build_batch_insert_query
+- _build_batch_params
+- _insert_events_fallback_per_event
+
+Назначение:
+- обработка входящих событий
+- запись в event store
+
+---
+
+### Rebuild
+- rebuild_snapshot
+- _run_rebuild
+- check_snapshot_consistency
+- _get_count
+
+Назначение:
+- пересборка snapshot
+- проверка консистентности
+
+---
+
+### DB
+- get_analytics_connection
+
+Назначение:
+- подключение к базе данных
+
+---
+
+## 11. Целевая структура сервисов
+
+app/services/
+
+    analytics/
+        map/
+        warehouse/
+
+    ingest/
+
+    rebuild/
+
+    db/
+
+---
+
+## 12. Вывод
+
+- функции успешно разделены по доменам
+- устранена неявная структура service layer
+- определена целевая архитектура
+- можно переходить к безопасному рефакторингу
