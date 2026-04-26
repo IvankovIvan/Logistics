@@ -128,7 +128,7 @@ export class MapFacade {
 
           const btn = document.getElementById("download-csv");
           btn?.addEventListener("click", () => {
-            downloadWarehouseCsv(Number(warehouseId));
+            void downloadWarehouseCsv(Number(warehouseId));
           });
 
           return;

@@ -18,6 +18,22 @@ export async function fetchWarehouse(
   return res.json();
 }
 
-export function downloadWarehouseCsv(warehouseId: number): void {
-  window.open(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
+export async function downloadWarehouseCsv(warehouseId: number) {
+  const res = await fetch(`/api/analytics/warehouse/${warehouseId}/batches.csv`);
+
+  if (!res.ok) {
+    throw new Error("Failed to download CSV");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `warehouse_${warehouseId}_batches.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.URL.revokeObjectURL(url);
 }
