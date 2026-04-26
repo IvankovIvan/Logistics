@@ -1,3 +1,4 @@
+-- /opt/Logistics/db/analytics/02_add_planned_departure_time.sql
 -- -----------------------------------------------------
 -- Project 11: planned_departure_time columns
 -- -----------------------------------------------------

@@ -341,3 +341,114 @@ component
 - backend
 - frontend
 - ingestion pipeline
+
+---
+
+# ⚙️ Runtime & Environment (обязательно)
+
+---
+
+## 1. Docker Services
+
+Система запускается через docker-compose.
+
+Основные сервисы:
+
+- app (FastAPI backend)
+- nginx (reverse proxy)
+- postgres (analytics DB)
+- redis
+- mssql-extractor (worker)
+- analytics-worker
+
+---
+
+## 2. Ports
+
+- backend: http://localhost:8000
+- swagger: http://localhost:8000/docs
+- nginx: http://localhost:80
+- postgres (analytics): localhost:5433
+- redis: localhost:6379
+
+---
+
+## 3. Запуск системы
+
+Команда:
+
+	docker compose up --build -d
+
+Проверка:
+
+	docker compose ps
+
+---
+
+## 4. Основные endpoints
+
+- GET /api/analytics/map
+- GET /api/analytics/warehouse/{id}
+- GET /api/analytics/warehouse/{id}/batches.csv
+- POST /api/analytics/ingest/events
+
+Swagger:
+
+	/docs
+
+---
+
+## 5. Переменные окружения
+
+Основные env:
+
+- MSSQL_BATCH_SIZE
+- MSSQL_CHUNK_SIZE
+- MSSQL_SLEEP_SECONDS
+- MSSQL_MAX_RETRIES
+- MSSQL_RETRY_DELAY
+- MSSQL_HTTP_TIMEOUT
+
+Назначение:
+
+- управление ingestion pipeline (Project №4)
+
+---
+
+## 6. Workers
+
+- analytics-worker:
+  - обновляет snapshot
+  - читает event store
+
+- mssql-extractor:
+  - читает MS SQL
+  - отправляет события в ingest API
+
+---
+
+## 7. Инварианты runtime
+
+- backend не работает без postgres
+- ingestion независим от frontend
+- workers работают отдельно
+- API всегда читает из snapshot
+
+---
+
+## 8. Ошибки и диагностика
+
+Проверка логов:
+
+	docker compose logs app
+	docker compose logs analytics-worker
+	docker compose logs mssql-extractor
+
+---
+
+## 9. Быстрый reset
+
+(если система сломалась)
+
+	docker compose down -v
+	docker compose up --build -d
