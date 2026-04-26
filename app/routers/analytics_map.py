@@ -69,11 +69,9 @@ def get_analytics_map() -> AnalyticsMapResponse:
     """
 
     try:
-        raw_data = build_analytics_map_warehouses()
-
         warehouses = []
 
-        for item in raw_data:
+        for item in build_analytics_map_warehouses():
             metrics = item["metrics"]
 
             warehouses.append(

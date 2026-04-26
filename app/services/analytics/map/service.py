@@ -161,11 +161,20 @@ def build_analytics_map_warehouses() -> list[AnalyticsMapWarehouse]:
 
         result.append(
             {
-                "warehouse_id": warehouse_id,
-                "name": name,
-                "lat": lat,
-                "lon": lon,
-                "metrics": metrics,
+                "warehouse_id": int(warehouse_id),
+                "name": str(name),
+                "lat": float(lat),
+                "lon": float(lon),
+                "metrics": {
+                    "total": int(metrics["total"]),
+                    "by_status": [
+                        {
+                            "status_id": int(status["status_id"]),
+                            "quantity": int(status["quantity"]),
+                        }
+                        for status in metrics["by_status"]
+                    ],
+                },
             }
         )
 
