@@ -9,7 +9,8 @@
 //   чтобы "поздний ответ" не перетёр более свежий
 
 import { useEffect, useRef, useState } from "react";
-import { fetchMap, MapResponse } from "./api";
+import { fetchMap } from "@/api/analytics";
+import { MapResponse } from "./api";
 
 type UseMapPollingOptions = {
   // enabled управляется оркестратором:

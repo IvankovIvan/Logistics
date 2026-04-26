@@ -50,7 +50,7 @@ export type MapResponse = {
  * - не кешируем (карта "на сейчас")
  * - при не-200 вытаскиваем текст (чтобы увидеть HTML 502/trace и т.п.)
  */
-async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, { cache: "no-store", signal });
 
   if (!res.ok) {
@@ -59,13 +59,4 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   }
 
   return (await res.json()) as T;
-}
-
-/**
- * Данные для карты одним запросом.
- * Endpoint есть в бекенде: /api/analytics/map
- */
-export async function fetchMap(signal?: AbortSignal): Promise<MapResponse> {
-  //return fetchJson<MapResponse>("/api/map", signal);
-  return fetchJson<MapResponse>("/api/analytics/map", signal);
 }
