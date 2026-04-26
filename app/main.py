@@ -35,8 +35,6 @@ def health():
 
 # ⬇️ ВАЖНО:
 # map_router, ingest_router, analytics_ingest_router и analytics_map_router
-# УЖЕ имеют prefix="/api"
-# app.include_router(map_router)
-# app.include_router(ingest_router)
+# УЖЕ имеют prefix="/api", поэтому не нужно его указывать здесь.
 app.include_router(analytics_ingest_router)
 app.include_router(analytics_map_router)
