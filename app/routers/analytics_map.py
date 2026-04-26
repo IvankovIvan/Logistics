@@ -24,10 +24,8 @@ from app.models.analytics.warehouse_metadata import (
 )
 from app.models.analytics_map_response import (
     AnalyticsMapResponse,
-    MapWarehouse,
-    WarehouseMetrics,
-    StatusQuantity,
 )
+from app.services.analytics.map.mapper import to_map_warehouse
 
 from app.services.analytics.warehouse.service import (
     get_analytics_warehouse_batches,
@@ -69,29 +67,10 @@ def get_analytics_map() -> AnalyticsMapResponse:
     """
 
     try:
-        warehouses = []
-
-        for item in build_analytics_map_warehouses():
-            metrics = item["metrics"]
-
-            warehouses.append(
-                MapWarehouse(
-                    warehouse_id=item["warehouse_id"],
-                    name=item["name"],
-                    lat=item["lat"],
-                    lon=item["lon"],
-                    metrics=WarehouseMetrics(
-                        total=metrics["total"],
-                        by_status=[
-                            StatusQuantity(
-                                status_id=s["status_id"],
-                                quantity=s["quantity"],
-                            )
-                            for s in metrics["by_status"]
-                        ],
-                    ),
-                )
-            )
+        warehouses = [
+            to_map_warehouse(item)
+            for item in build_analytics_map_warehouses()
+        ]
 
         return AnalyticsMapResponse(
             warehouses=warehouses,

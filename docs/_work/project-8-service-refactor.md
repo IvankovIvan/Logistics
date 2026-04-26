@@ -539,3 +539,19 @@ router → service → db
 Результат:
 - упрощение router
 - единая типизация системы
+
+---
+
+## 32. Step 18 — Mapper layer (API transformation)
+
+Цель:
+- вынести преобразование TypedDict → Pydantic из router
+- сделать router максимально тонким
+
+Подход:
+- создаётся mapper слой
+- mapper отвечает за преобразование данных service → API модели
+
+Результат:
+- router содержит только orchestration
+- логика преобразования централизована
