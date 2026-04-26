@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from app.services.analytics.utils import _as_mapping
 from app.services.db.connection import get_analytics_connection
 
@@ -74,9 +76,16 @@ ORDER BY last_event_time DESC;
 """
 
 
+class WarehouseRow(TypedDict):
+    warehouse_id: int
+    name: str
+    city: str
+    warehouse_type: str
+
+
 def get_analytics_warehouse_metadata(
     warehouse_id: int,
-) -> dict[str, object] | None:
+) -> WarehouseRow | None:
     """
     Возвращает metadata одного склада из analytics-справочников.
 

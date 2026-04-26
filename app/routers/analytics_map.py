@@ -128,7 +128,7 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
             detail="Warehouse not found",
         )
 
-    row_typed: dict[str, Any] = row
+    row_typed = row
 
     metric_rows = get_analytics_warehouse_metrics(warehouse_id)
 
