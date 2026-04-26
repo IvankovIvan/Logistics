@@ -391,7 +391,67 @@ docs находятся в:
 
 ## 1.1 Docker Service Mapping (обязательно)
 
-(вставить mapping как выше)
+Каждый сервис имеет:
+
+- логическое имя (architecture)
+- docker service name
+- реальное имя контейнера
+
+---
+
+analytics DB:
+
+- logical: analytics-db
+- service: analytics-db
+- container: logistics-analytics-db-1
+
+---
+
+analytics worker:
+
+- logical: analytics-worker
+- service: analytics-worker
+- container: logistics-analytics-worker-1
+
+---
+
+backend:
+
+- logical: app
+- service: app
+- container: logistics-app-1
+
+---
+
+mssql extractor:
+
+- logical: mssql-extractor
+- service: mssql-extractor
+- container: logistics-mssql-extractor-1
+
+---
+
+nginx:
+
+- logical: nginx
+- service: nginx
+- container: logistics-nginx-1
+
+---
+
+redis:
+
+- logical: redis
+- service: redis
+- container: logistics-redis-1
+
+---
+
+frontend:
+
+- logical: web
+- service: web
+- container: logistics-web-1
 
 ---
 
