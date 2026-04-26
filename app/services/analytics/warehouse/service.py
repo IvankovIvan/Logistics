@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.services.analytics.utils import _as_mapping
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 
 
 SELECT_WAREHOUSE_METADATA = """

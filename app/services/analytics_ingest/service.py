@@ -37,7 +37,7 @@ from psycopg import sql
 
 from app.models.analytics.events import AnalyticsEvent
 from app.models.analytics.results import AnalyticsEventResult, AnalyticsIngestResponse
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 from app.services.analytics_ingest.queries import (
     CREATE_MONTH_PARTITION,
     INSERT_ANALYTICS_EVENT,

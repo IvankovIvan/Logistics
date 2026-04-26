@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 from app.services.analytics.utils import _as_mapping
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 
 
 class StatusQuantity(TypedDict):

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 from app.services.analytics_rebuild.service import rebuild_snapshot
 
 

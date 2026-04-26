@@ -20,7 +20,7 @@ from typing import Any
 
 from psycopg import Cursor
 
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 
 
 LOGGER = logging.getLogger(__name__)

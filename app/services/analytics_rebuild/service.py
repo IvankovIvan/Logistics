@@ -14,7 +14,7 @@ import time
 
 from psycopg import Connection
 
-from app.services.analytics_ingest.connection import get_analytics_connection
+from app.services.db.connection import get_analytics_connection
 
 
 LOGGER = logging.getLogger(__name__)
