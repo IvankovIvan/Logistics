@@ -506,3 +506,36 @@ web/ — frontend приложения (Next.js)
 - проверка запуска/состояния
 
 ---
+
+## 8. Связи компонентов
+
+Основные зависимости:
+
+- routers → services → database
+- services → models
+- workers → database
+- mssql_extractor → ingest API → event store
+- frontend → backend API
+
+---
+
+## 9. Поток данных
+
+MS SQL → extractor → ingest API → event store → analytics_worker → snapshot → API → frontend
+
+---
+
+## 10. Итог
+
+Project №7 фиксирует:
+
+- полную структуру проекта
+- ответственность каждого слоя
+- распределение файлов
+- связи между компонентами
+
+Документ используется как:
+
+- карта проекта
+- инструмент навигации
+- база для дальнейшего развития
