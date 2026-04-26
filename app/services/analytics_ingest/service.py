@@ -37,11 +37,11 @@ from psycopg import sql
 
 from app.models.analytics.events import AnalyticsEvent
 from app.models.analytics.results import AnalyticsEventResult, AnalyticsIngestResponse
-from app.services.db.connection import get_analytics_connection
-from app.services.analytics_ingest.queries import (
-    CREATE_MONTH_PARTITION,
-    INSERT_ANALYTICS_EVENT,
+from app.repositories.ingest_repository import (
+    create_partition,
+    insert_event,
 )
+from app.services.db.connection import get_analytics_connection
 
 
 LOGGER = logging.getLogger(__name__)
@@ -205,9 +205,9 @@ def _insert_events_fallback_per_event(
                 sql.SQL("SAVEPOINT {}").format(sql.Identifier(savepoint))
             )
 
-            cur.execute(INSERT_ANALYTICS_EVENT, _event_params(event))
+            inserted_row = insert_event(_event_params(event), cur)
 
-            if cur.rowcount == 1:
+            if inserted_row is not None:
                 cur.execute(
                     sql.SQL("RELEASE SAVEPOINT {}").format(
                         sql.Identifier(savepoint)
@@ -314,12 +314,10 @@ def ingest_analytics_events(events: List[AnalyticsEvent]) -> AnalyticsIngestResp
     with get_analytics_connection() as conn:
         with conn.cursor() as cur:
             for month_start in sorted(months):
-                cur.execute(
-                    CREATE_MONTH_PARTITION,
-                    {"event_time": month_start},
+                partition_row = cast(
+                    Mapping[str, Any] | None,
+                    create_partition(month_start, cur),
                 )
-
-                partition_row = cast(Mapping[str, Any] | None, cur.fetchone())
                 if partition_row is not None:
                     created_partition = partition_row["created_partition"]
                     if created_partition:

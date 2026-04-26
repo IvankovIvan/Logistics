@@ -193,3 +193,22 @@ app/repositories/
 Результат:
 - чистая архитектура
 - понятный rebuild pipeline
+
+---
+
+## Step 5 — Ingest repository
+
+Цель:
+- вынести SQL операций ingest в repository
+- сохранить сложную бизнес-логику в service
+
+Проблема:
+- ingest содержит SQL + retry + fallback + batch logic
+
+Решение:
+- SQL операции переносятся в repository
+- orchestration остаётся в service
+
+Результат:
+- читаемый ingest pipeline
+- безопасная архитектура
