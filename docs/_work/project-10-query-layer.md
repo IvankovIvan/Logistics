@@ -196,19 +196,29 @@ app/repositories/
 
 ---
 
-## Step 5 — Ingest repository
+### Step 6 — Final verification
 
-Цель:
-- вынести SQL операций ingest в repository
-- сохранить сложную бизнес-логику в service
+Проверка:
 
-Проблема:
-- ingest содержит SQL + retry + fallback + batch logic
+Repository:
+- весь SQL находится в repositories
+- нет SQL в service
 
-Решение:
-- SQL операции переносятся в repository
-- orchestration остаётся в service
+Service:
+- содержит только orchestration
+- читается как бизнес-логика
+
+Ingest:
+- pipeline работает
+- fallback работает
+- idempotency сохранена
+
+Rebuild:
+- snapshot корректно пересобирается
+
+Map:
+- карта работает
+- данные корректные
 
 Результат:
-- читаемый ingest pipeline
-- безопасная архитектура
+- backend соответствует production архитектуре
