@@ -1,3 +1,4 @@
+# app/repositories/rebuild_repository.py
 from app.services.db.connection import get_analytics_connection
 from psycopg import Connection
 
@@ -28,6 +29,7 @@ def rebuild_snapshot_data(conn: Connection | None = None) -> int:
 			e.source_location_id,
 			e.destination_location_id,
 			e.event_time,
+			e.planned_departure_time,
 			e.status_reason_id,
 			e.event_id
 		FROM analytics.inventory_status_events e
@@ -43,7 +45,8 @@ def rebuild_snapshot_data(conn: Connection | None = None) -> int:
 			le.quantity,
 			le.source_location_id,
 			le.destination_location_id,
-			le.event_time
+			le.event_time,
+			le.planned_departure_time
 		FROM latest_events le
 		JOIN analytics.status_reason sr
 			ON sr.status_reason_id = le.status_reason_id
@@ -58,7 +61,8 @@ def rebuild_snapshot_data(conn: Connection | None = None) -> int:
 		quantity,
 		source_location_id,
 		destination_location_id,
-		last_event_time
+		last_event_time,
+		planned_departure_time
 	)
 	SELECT
 		f.batch_id,
@@ -69,7 +73,8 @@ def rebuild_snapshot_data(conn: Connection | None = None) -> int:
 		f.quantity,
 		f.source_location_id,
 		f.destination_location_id,
-		f.event_time
+		f.event_time,
+		f.planned_departure_time
 	FROM filtered f;
 	"""
 

@@ -64,6 +64,7 @@ SELECT
     e.status_reason_id,
     e.quantity,
     e.event_time,
+    e.planned_departure_time,
     sr.is_tracking_finished
 FROM analytics.inventory_status_events e
 JOIN analytics.status_reason sr
@@ -95,6 +96,7 @@ INSERT INTO analytics.current_batch_state (
     quantity,
     source_location_id,
     destination_location_id,
+    planned_departure_time,
     last_event_time
 )
 VALUES (
@@ -106,6 +108,7 @@ VALUES (
     %(quantity)s,
     %(source_location_id)s,
     %(destination_location_id)s,
+    %(planned_departure_time)s,
     %(event_time)s
 )
 ON CONFLICT (batch_id) DO UPDATE
@@ -117,6 +120,7 @@ SET
     quantity = EXCLUDED.quantity,
     source_location_id = EXCLUDED.source_location_id,
     destination_location_id = EXCLUDED.destination_location_id,
+    planned_departure_time = EXCLUDED.planned_departure_time,
     last_event_time = EXCLUDED.last_event_time
 WHERE analytics.current_batch_state.last_event_time IS NULL
    OR EXCLUDED.last_event_time > analytics.current_batch_state.last_event_time;
@@ -224,6 +228,7 @@ def process_batch(batch_size: int | None = None) -> int:
                                 "destination_location_id": event[
                                     "destination_location_id"
                                 ],
+                                "planned_departure_time": event["planned_departure_time"],
                                 "event_time": event["event_time"],
                             },
                         )

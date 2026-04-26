@@ -31,6 +31,7 @@ class EventRow(TypedDict):
     status_reason_id: int
     quantity: int
     event_time: str
+    planned_departure_time: str | None
     source_system: int
 
 
@@ -127,6 +128,14 @@ def fetch_batch(
             else:
                 event_time_str = str(event_time_value)
 
+            planned_departure_time_value = values_by_column.get("planned_departure_time")
+            if planned_departure_time_value is None:
+                planned_departure_time_str = None
+            elif isinstance(planned_departure_time_value, datetime):
+                planned_departure_time_str = planned_departure_time_value.isoformat()
+            else:
+                planned_departure_time_str = str(planned_departure_time_value)
+
             row_dict: EventRow = {
                 "event_id": int(values_by_column["event_id"]),
                 "operation_id": int(values_by_column["operation_id"]),
@@ -148,6 +157,7 @@ def fetch_batch(
                 "status_reason_id": int(values_by_column["status_reason_id"]),
                 "quantity": int(values_by_column["quantity"]),
                 "event_time": event_time_str,
+                "planned_departure_time": planned_departure_time_str,
                 "source_system": int(values_by_column["source_system"]),
             }
 
