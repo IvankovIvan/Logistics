@@ -24,11 +24,13 @@ from app.models.analytics.warehouse_metadata import (
     AnalyticsWarehouseStatus,
 )
 
-from app.services.analytics_map_builder import (
+from app.services.analytics.warehouse.service import (
     get_analytics_warehouse_batches,
-    build_analytics_map_warehouses,
     get_analytics_warehouse_metrics,
     get_analytics_warehouse_metadata,
+)
+from app.services.analytics_map_builder import (
+    build_analytics_map_warehouses,
 )
 
 
