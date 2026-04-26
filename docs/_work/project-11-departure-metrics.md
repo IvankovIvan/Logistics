@@ -149,3 +149,71 @@ Project №11 добавляет:
 - расширение popup API
 
 Без изменения существующих endpoint.
+
+---
+
+## 11. Текущий статус реализации
+
+### 11.1 DB
+
+Добавлено поле:
+
+planned_departure_time (timestamptz | null)
+
+в таблицы:
+
+- analytics.inventory_status_events
+- analytics.current_batch_state
+
+---
+
+### 11.2 Ingest
+
+Поле поддерживается:
+
+- model (AnalyticsEvent)
+- service (event params + batch insert)
+- repository (fallback insert)
+
+Поле корректно записывается в event store.
+
+---
+
+### 11.3 Worker
+
+Поле поддерживается:
+
+- SELECT из event store
+- UPSERT в snapshot
+- обновление при новых событиях
+
+---
+
+### 11.4 Rebuild
+
+Поле поддерживается:
+
+- latest_events
+- filtered
+- INSERT snapshot
+
+Исправлен порядок колонок:
+planned_departure_time и last_event_time.
+
+---
+
+### 11.5 Ограничения текущей реализации
+
+- поле пока не используется в API
+- метрики не реализованы
+- проценты не рассчитываются
+- frontend не отображает данные
+
+---
+
+### 11.6 Инварианты
+
+- поле может быть NULL
+- поле не участвует в idempotency
+- поле не влияет на worker логику
+- используется только для аналитики
