@@ -145,9 +145,18 @@ def get_analytics_warehouse(warehouse_id: int) -> AnalyticsWarehouseMetadata:
 
 @router.get(
     "/warehouse/{warehouse_id}/batches.csv",
+    response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
     summary="Export warehouse batches CSV",
-    description="Скачивание CSV со списком партий склада",
+    description=(
+        "Скачивание CSV со списком партий склада.\n\n"
+        "Формат:\n"
+        "- batch_id: int\n"
+        "- status_id: int\n"
+        "- quantity: int\n"
+        "- warehouse_id: int\n"
+        "- last_event_time: datetime\n"
+    ),
 )
 def export_analytics_warehouse_batches_csv(warehouse_id: int) -> StreamingResponse:
     rows = get_analytics_warehouse_batches(warehouse_id)
