@@ -343,3 +343,120 @@ db/ — слой базы данных
 - описание структуры базы данных
 
 ---
+
+## 7.6 Frontend (web)
+
+web/ — frontend приложения (Next.js)
+
+Назначение:
+- отображение карты (MapLibre)
+- визуализация складов и маршрутов
+- взаимодействие с backend API
+- отображение popup и фильтров
+
+---
+
+### src/app/
+
+#### page.tsx
+- основной экран приложения
+
+#### layout.tsx
+- общий layout приложения
+
+#### MapView.tsx
+- основной компонент карты
+
+---
+
+### components/
+
+#### RouteLegend.tsx
+- отображение легенды маршрутов
+
+---
+
+### map/
+
+#### api.ts
+- работа с backend API
+
+#### constants.ts
+- константы карты
+
+#### transform.ts
+- преобразование данных для отображения
+
+#### useMapPolling.ts
+- обновление данных карты (polling)
+
+---
+
+### map/facade/
+
+#### map.facade.ts
+- слой абстракции над API и логикой карты
+
+---
+
+### map/geometry/
+
+#### routes.geometry.ts
+- построение геометрии маршрутов
+
+---
+
+### map/handlers/
+
+#### routes.hover.ts
+- обработка наведения на маршруты
+
+#### warehouses.hover.ts
+- обработка наведения на склады
+
+---
+
+### map/layers/
+
+#### routes.layers.ts
+- слой отображения маршрутов
+
+#### warehouses.layers.ts
+- слой отображения складов
+
+---
+
+### map/routes/
+
+#### routes.aggregate.ts
+- агрегация маршрутов
+
+---
+
+### map/sources/
+
+#### map.sources.ts
+- источники данных для карты
+
+---
+
+### map/transform/
+
+#### routes.ts
+- преобразование маршрутов
+
+---
+
+### map/ui/
+
+#### RouteStatusFilter.tsx
+- фильтр по статусам маршрутов
+
+---
+
+### map/utils/
+
+#### routeFilterPersist.ts
+- сохранение фильтров
+
+---
